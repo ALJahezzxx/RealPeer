@@ -1,1413 +1,909 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Real-DMS // Decentralized Messaging</title>
-<style>
-  :root{
-    --bg0:#0f1115; --bg1:#151922; --bg2:#1b2130; --bg3:#232a3a;
-    --card:#171c26; --card2:#1f2634; --line:#2d3648;
-    --txt:#eef2ff; --muted:#99a3b3; --muted2:#6f798a;
-    --brand:#7c8cff; --brand2:#5f73ff; --ok:#38d39f; --warn:#ffb86b; --bad:#ff6b7a;
-    --shadow: 0 16px 40px rgba(0,0,0,.35);
-    --radius: 22px;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0; background:
-      radial-gradient(1200px 900px at 20% 0%, rgba(124,140,255,.16), transparent 55%),
-      radial-gradient(1000px 800px at 100% 20%, rgba(56,211,159,.08), transparent 48%),
-      linear-gradient(180deg, #0b0d12, var(--bg0));
-    color:var(--txt); font: 14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-    overflow:hidden;
-  }
-  button,input,textarea,select{font:inherit}
-  button{cursor:pointer}
-  a{color:inherit}
-  .app{display:grid; grid-template-columns: 320px 1fr; height:100vh}
-  .sidebar{
-    background: rgba(16,19,28,.86); backdrop-filter: blur(18px);
-    border-right:1px solid rgba(255,255,255,.06);
-    display:flex; flex-direction:column; min-width:0;
-  }
-  .brand{
-    padding:18px 18px 12px; display:flex; gap:12px; align-items:center;
-    border-bottom:1px solid rgba(255,255,255,.06);
-  }
-  .brand-badge{
-    width:42px; height:42px; border-radius:14px; display:grid; place-items:center;
-    background: linear-gradient(135deg, var(--brand), #9a5cff); box-shadow: var(--shadow);
-    font-weight:800;
-  }
-  .brand h1{font-size:16px; margin:0}
-  .brand p{margin:2px 0 0; color:var(--muted); font-size:12px}
-  .profile{
-    margin:14px 14px 0; padding:14px; border:1px solid rgba(255,255,255,.06);
-    background:rgba(255,255,255,.03); border-radius:18px;
-    display:flex; gap:12px; align-items:center;
-  }
-  .avatar{
-    width:48px; height:48px; border-radius:50%; display:grid; place-items:center;
-    background: linear-gradient(135deg, var(--brand2), #9a5cff); font-weight:800; flex:0 0 auto;
-  }
-  .profile .name{font-weight:700; font-size:14px}
-  .profile .sub{color:var(--muted); font-size:12px; word-break:break-word}
-  .sidebar-actions{
-    padding:12px 14px; display:grid; grid-template-columns:1fr 1fr; gap:10px;
-  }
-  .btn{
-    border:0; color:white; border-radius:14px; padding:12px 14px; font-weight:700;
-    background: linear-gradient(135deg, var(--brand), var(--brand2));
-    box-shadow: 0 10px 24px rgba(95,115,255,.22);
-  }
-  .btn.secondary{background: rgba(255,255,255,.05); box-shadow:none; border:1px solid rgba(255,255,255,.07)}
-  .btn.ghost{background:transparent; border:1px solid rgba(255,255,255,.1); color:var(--muted)}
-  .search{
-    margin:0 14px 10px;
-    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06);
-    border-radius:14px; padding:11px 12px; color:var(--txt); outline:none;
-  }
-  .section-title{
-    margin:10px 14px 8px; color:var(--muted); font-size:12px; letter-spacing:.08em; text-transform:uppercase;
-  }
-  .contacts{flex:1; overflow:auto; padding:0 8px 14px}
-  .contact{
-    margin:0 6px 8px; border-radius:18px; padding:12px; border:1px solid transparent;
-    display:flex; gap:12px; align-items:center; background:transparent;
-  }
-  .contact:hover,.contact.active{background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.05)}
-  .contact .info{min-width:0; flex:1}
-  .contact .top{display:flex; justify-content:space-between; gap:8px; align-items:center}
-  .contact .top strong{font-size:14px}
-  .contact .top span{font-size:11px; color:var(--muted)}
-  .contact .preview{color:var(--muted); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-  .dot{width:10px; height:10px; border-radius:50%; background:var(--muted2)}
-  .dot.online{background:var(--ok); box-shadow:0 0 0 4px rgba(56,211,159,.15)}
-  .dot.pending{background:var(--warn)}
-  .main{
-    display:flex; flex-direction:column; min-width:0; background:rgba(10,12,18,.62);
-  }
-  .topbar{
-    height:72px; display:flex; align-items:center; justify-content:space-between;
-    padding:0 18px; border-bottom:1px solid rgba(255,255,255,.06);
-    background:rgba(16,19,28,.75); backdrop-filter: blur(18px);
-  }
-  .peer-title{display:flex; align-items:center; gap:12px; min-width:0}
-  .peer-title h2{margin:0; font-size:16px}
-  .peer-title p{margin:2px 0 0; color:var(--muted); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60vw}
-  .status-pill{
-    display:inline-flex; align-items:center; gap:8px; padding:9px 12px; border-radius:999px;
-    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.06); color:var(--muted);
-    font-size:12px;
-  }
-  .messages{
-    flex:1; overflow:auto; padding:18px 16px 8px; display:flex; flex-direction:column; gap:12px;
-  }
-  .empty{
-    margin:auto; max-width:520px; text-align:center; padding:26px; border:1px dashed rgba(255,255,255,.1);
-    border-radius:24px; background:rgba(255,255,255,.03); color:var(--muted);
-  }
-  .bubble-row{display:flex; gap:10px; align-items:flex-end; max-width:100%}
-  .bubble-row.me{justify-content:flex-end}
-  .bubble{
-    max-width:min(720px, 88vw); padding:12px 14px; border-radius:18px;
-    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.06);
-    box-shadow:0 8px 20px rgba(0,0,0,.15);
-    min-width:0;
-  }
-  .bubble.me{background:linear-gradient(135deg, rgba(124,140,255,.25), rgba(95,115,255,.15)); border-color:rgba(124,140,255,.25)}
-  .bubble .meta{display:flex; gap:10px; align-items:center; margin-bottom:6px; font-size:11px; color:var(--muted)}
-  .bubble .name{font-weight:700; color:var(--txt)}
-  .bubble .text{white-space:pre-wrap; word-break:break-word}
-  .bubble .attachment{
-    margin-top:10px; border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,.08);
-    background:rgba(255,255,255,.03)
-  }
-  .bubble .attachment img{display:block; max-width:100%; height:auto}
-  .bubble .attachment a{display:block; padding:10px 12px; text-decoration:none; color:var(--txt)}
-  .msg-tools{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap}
-  .chip{
-    border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:var(--muted);
-    border-radius:999px; padding:6px 10px; font-size:12px;
-  }
-  .composer{
-    padding:14px 16px 18px; border-top:1px solid rgba(255,255,255,.06);
-    background:rgba(16,19,28,.78); backdrop-filter: blur(18px);
-  }
-  .compose-box{
-    display:flex; gap:10px; align-items:flex-end; background:rgba(255,255,255,.05);
-    border:1px solid rgba(255,255,255,.07); border-radius:20px; padding:10px;
-  }
-  .compose-box textarea{
-    flex:1; min-height:24px; max-height:180px; resize:none; border:0; outline:none; background:transparent;
-    color:var(--txt); padding:6px 4px; font:inherit;
-  }
-  .toolbtn{
-    width:42px; height:42px; border-radius:14px; border:0;
-    background:rgba(255,255,255,.06); color:var(--txt);
-  }
-  .compose-actions{display:flex; gap:10px; margin-top:10px; flex-wrap:wrap}
-  .tiny{font-size:12px; color:var(--muted)}
-  .modal-backdrop{
-    position:fixed; inset:0; background:rgba(5,7,12,.66); display:none; align-items:center; justify-content:center; z-index:50;
-    padding:16px;
-  }
-  .modal-backdrop.show{display:flex}
-  .modal{
-    width:min(920px, 100%); max-height:min(88vh, 820px); overflow:auto;
-    background:linear-gradient(180deg, rgba(24,29,41,.98), rgba(18,22,31,.98));
-    border:1px solid rgba(255,255,255,.08); border-radius:28px; box-shadow:var(--shadow);
-  }
-  .modal-head{
-    padding:18px 20px; border-bottom:1px solid rgba(255,255,255,.06);
-    display:flex; justify-content:space-between; gap:12px; align-items:center;
-  }
-  .modal-head h3{margin:0; font-size:16px}
-  .modal-body{padding:18px 20px 20px}
-  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px}
-  .field{display:flex; flex-direction:column; gap:8px; margin-bottom:12px}
-  .field label{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em}
-  .field input,.field textarea{
-    width:100%; border-radius:16px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04);
-    color:var(--txt); padding:12px 14px; outline:none;
-  }
-  .field textarea{min-height:110px; resize:vertical}
-  .panel{
-    border:1px solid rgba(255,255,255,.08); border-radius:20px; background:rgba(255,255,255,.03); padding:14px
-  }
-  .row{display:flex; gap:10px; flex-wrap:wrap}
-  .row > *{flex:1}
-  .token{
-    width:100%; min-height:140px; white-space:pre-wrap; word-break:break-all; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-  }
-  .toast{
-    position:fixed; right:16px; bottom:16px; max-width:min(420px, calc(100vw - 32px));
-    background:rgba(18,22,31,.96); color:var(--txt); border:1px solid rgba(255,255,255,.08);
-    padding:14px 16px; border-radius:18px; box-shadow:var(--shadow); z-index:60; display:none;
-  }
-  .toast.show{display:block}
-  .hide-mobile{display:block}
-  .mobile-nav{display:none}
-  @media (max-width: 900px){
-    body{overflow:auto}
-    .app{grid-template-columns:1fr; height:100dvh}
-    .sidebar{display:none}
-    .sidebar.open{display:flex; position:fixed; inset:0; z-index:40}
-    .main{min-height:100dvh}
-    .hide-mobile{display:none}
-    .mobile-nav{display:flex; gap:10px}
-    .peer-title p{max-width:58vw}
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-DMS // Peer-to-Peer Messaging</title>
+    <style>
+        :root {
+            --bg-primary: #313338;
+            --bg-secondary: #2b2d31;
+            --bg-tertiary: #1e1f22;
+            --text-normal: #dbdee1;
+            --text-muted: #949ba4;
+            --brand: #5865f2;
+            --brand-hover: #4752c4;
+            --success: #23a55a;
+            --border: #3f4147;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-tertiary);
+            color: var(--text-normal);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        #app-container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: 300px;
+            background-color: var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+        }
+
+        .profile-panel {
+            padding: 15px;
+            background-color: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--brand);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .profile-info h4 {
+            font-size: 14px;
+            color: var(--text-normal);
+        }
+
+        .profile-info span {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+
+        .contact-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .contact-item {
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 4px;
+            transition: background 0.2s;
+        }
+
+        .contact-item:hover, .contact-item.active {
+            background-color: var(--bg-primary);
+        }
+
+        /* Main Chat Window */
+        .main-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-primary);
+        }
+
+        .chat-header {
+            height: 60px;
+            background-color: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            justify-content: space-between;
+        }
+
+        .message-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            max-width: 80%;
+        }
+
+        .message.system {
+            max-width: 100%;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        .message-content {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .msg-meta {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .msg-user {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .msg-time {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .msg-text {
+            font-size: 15px;
+            word-break: break-word;
+            line-height: 1.4;
+        }
+
+        .input-area {
+            padding: 0 20px 24px 20px;
+            background-color: var(--bg-primary);
+        }
+
+        .input-wrapper {
+            background-color: var(--border);
+            border-radius: 8px;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-normal);
+            font-size: 15px;
+        }
+
+        /* Connection / Setup Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            padding: 24px;
+            border: 1px solid var(--border);
+        }
+
+        .modal h2 { margin-bottom: 16px; }
+        .modal input, .modal textarea {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: white;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+
+        .btn {
+            background: var(--brand);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn:hover { background: var(--brand-hover); }
+        .hidden { display: none !important; }
+    </style>
 </head>
 <body>
-<div class="app">
-  <aside class="sidebar" id="sidebar">
-    <div class="brand">
-      <div class="brand-badge">R</div>
-      <div>
-        <h1>Real-DMS</h1>
-        <p>Local-first · E2EE · WebRTC</p>
-      </div>
-    </div>
 
-    <div class="profile">
-      <div class="avatar" id="meAvatar">?</div>
-      <div style="min-width:0">
-        <div class="name" id="meName">Loading…</div>
-        <div class="sub" id="meSub">Preparing secure identity</div>
-      </div>
-    </div>
-
-    <div class="sidebar-actions">
-      <button class="btn" id="addPeerBtn">Add Peer</button>
-      <button class="btn secondary" id="identityBtn">Identity</button>
-    </div>
-
-    <input class="search" id="contactSearch" placeholder="Search local contacts" />
-
-    <div class="section-title">Contacts</div>
-    <div class="contacts" id="contacts"></div>
-  </aside>
-
-  <main class="main">
-    <div class="topbar">
-      <div class="peer-title">
-        <button class="toolbtn mobile-nav" id="mobileMenuBtn" aria-label="Open sidebar">☰</button>
-        <div class="avatar" id="chatAvatar" style="width:40px;height:40px">?</div>
-        <div style="min-width:0">
-          <h2 id="chatTitle">No active chat</h2>
-          <p id="chatSub">Create or import a peer invite to begin</p>
+    <div id="setup-modal" class="modal-overlay">
+        <div class="modal">
+            <h2>Create Real-DMS Cryptographic Identity</h2>
+            <p style="color: var(--text-muted); margin-bottom: 16px; font-size: 14px;">
+                Your cryptographic keypair will be generated completely inside your browser locally.
+            </p>
+            <input type="text" id="username-input" placeholder="Choose a Username (e.g., Alice)">
+            <button class="btn" onclick="app.initIdentity()">Generate Identity</button>
         </div>
-      </div>
-      <div class="status-pill" id="statusPill">● Offline local history</div>
     </div>
 
-    <section class="messages" id="messages"></section>
-
-    <div class="composer">
-      <div class="compose-box">
-        <button class="toolbtn" id="attachBtn" title="Attach file">＋</button>
-        <textarea id="composerInput" placeholder="Type a message…" rows="1"></textarea>
-        <button class="toolbtn" id="emojiBtn" title="Insert emoji">☺</button>
-        <button class="btn" id="sendBtn" style="width:auto; min-width:100px">Send</button>
-      </div>
-      <div class="compose-actions">
-        <span class="tiny" id="composerHint">No connection yet. Pair with a peer using an invite token.</span>
-      </div>
-      <input type="file" id="fileInput" hidden />
-    </div>
-  </main>
-</div>
-
-<div class="modal-backdrop" id="setupModal">
-  <div class="modal">
-    <div class="modal-head">
-      <h3>Create your local identity</h3>
-      <button class="btn ghost" id="closeSetupBtn">Close</button>
-    </div>
-    <div class="modal-body">
-      <div class="grid2">
-        <div class="panel">
-          <div class="field"><label>Username</label><input id="usernameInput" placeholder="e.g. jehad" autocomplete="off" /></div>
-          <div class="field"><label>Display name</label><input id="displayNameInput" placeholder="How others see you" autocomplete="off" /></div>
-          <div class="field"><label>Bio</label><textarea id="bioInput" placeholder="Short bio…"></textarea></div>
-          <button class="btn" id="createIdentityBtn">Generate Identity</button>
-        </div>
-        <div class="panel">
-          <strong>What is created?</strong>
-          <p class="tiny" style="margin-top:8px">A local cryptographic identity is generated inside your browser and saved to IndexedDB on this device. Private keys never leave the device unless you explicitly export them.</p>
-          <div class="tiny" style="margin-top:14px; line-height:1.7">
-            • Username uniqueness is enforced locally among saved contacts.<br>
-            • Direct messaging needs a token exchange because there is no permanent backend.<br>
-            • Chat history is saved locally and remains readable offline.
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="modal-backdrop" id="peerModal">
-  <div class="modal">
-    <div class="modal-head">
-      <h3>Add / Pair Peer</h3>
-      <button class="btn ghost" id="closePeerBtn">Close</button>
-    </div>
-    <div class="modal-body">
-      <div class="grid2">
-        <div class="panel">
-          <strong>Create invite</strong>
-          <p class="tiny" style="margin:8px 0 14px">Generate a WebRTC offer token and send it to the other person.</p>
-          <div class="row">
-            <button class="btn" id="createInviteBtn">Create Offer Token</button>
-            <button class="btn secondary" id="copyInviteBtn">Copy</button>
-          </div>
-          <textarea class="token" id="inviteToken" placeholder="Offer token appears here…" readonly></textarea>
-          <div class="field" style="margin-top:12px"><label>Paste answer token</label><textarea id="finalAnswerToken" class="token" placeholder="Paste the answer token here…"></textarea></div>
-          <div class="row">
-            <button class="btn" id="finalizeAnswerBtn">Finalize Connection</button>
-            <button class="btn secondary" id="copyFinalInviteBtn">Copy Offer Again</button>
-          </div>
-        </div>
-        <div class="panel">
-          <strong>Accept invite</strong>
-          <p class="tiny" style="margin:8px 0 14px">Paste the offer token you received, generate an answer, then send that answer back.</p>
-          <div class="field"><label>Paste offer token</label><textarea id="incomingOffer" class="token" placeholder="Paste offer token here…"></textarea></div>
-          <div class="row">
-            <button class="btn" id="acceptOfferBtn">Generate Answer</button>
-            <button class="btn secondary" id="copyAnswerBtn">Copy Answer</button>
-          </div>
-          <textarea class="token" id="answerToken" placeholder="Answer token appears here…" readonly></textarea>
-        </div>
-      </div>
-      <div class="panel" style="margin-top:14px">
-        <strong>Pairing note</strong>
-        <p class="tiny" style="margin-top:8px; line-height:1.6">
-          This file uses manual token exchange for signaling. That is the trade-off that lets it run without a permanent backend.
-          Once the WebRTC DataChannel opens, messages are encrypted end-to-end with a session key derived from the two peers' ECDH keys.
-        </p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="modal-backdrop" id="identityModal">
-  <div class="modal">
-    <div class="modal-head">
-      <h3>Your identity</h3>
-      <button class="btn ghost" id="closeIdentityBtn">Close</button>
-    </div>
-    <div class="modal-body">
-      <div class="grid2">
-        <div class="panel">
-          <div class="field"><label>Username</label><input id="idUsername" readonly /></div>
-          <div class="field"><label>Display name</label><input id="idDisplayName" readonly /></div>
-          <div class="field"><label>Bio</label><textarea id="idBio" readonly></textarea></div>
-          <div class="field"><label>Identity fingerprint</label><input id="idFingerprint" readonly /></div>
-        </div>
-        <div class="panel">
-          <strong>Backup & privacy</strong>
-          <p class="tiny" style="margin-top:8px; line-height:1.6">
-            Your private key remains on this device in browser storage. This is a browser-native prototype, so long-term portability depends on your browser profile and device backup.
-          </p>
-          <div class="row" style="margin-top:14px">
-            <button class="btn secondary" id="exportBackupBtn">Export Backup</button>
-            <button class="btn secondary" id="resetBtn">Reset Local Data</button>
-          </div>
-          <p class="tiny" style="margin-top:14px">Export is local-only JSON for your own use.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="modal-backdrop" id="fileModal">
-  <div class="modal">
-    <div class="modal-head">
-      <h3>Send attachment</h3>
-      <button class="btn ghost" id="closeFileBtn">Close</button>
-    </div>
-    <div class="modal-body">
-      <div class="panel">
-        <div class="field"><label>Selected file</label><input id="fileName" readonly /></div>
-        <div class="tiny" id="fileInfo">Preparing…</div>
-        <div class="row" style="margin-top:14px">
-          <button class="btn" id="sendFileBtn">Encrypt & Send</button>
-          <button class="btn secondary" id="removeFileBtn">Remove</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script>
-(() => {
-  const DB_NAME = 'RealDMS_Engine_v2';
-  const DB_VERSION = 2;
-  const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
-  const MAX_ATTACHMENT_BYTES = 1_200_000;
-
-  const $ = (id) => document.getElementById(id);
-  const now = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
-  const enc = new TextEncoder();
-  const dec = new TextDecoder();
-
-  function showToast(msg, ms = 2800) {
-    const t = $('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    clearTimeout(showToast._timer);
-    showToast._timer = setTimeout(() => t.classList.remove('show'), ms);
-  }
-
-  function safeText(v) {
-    return String(v ?? '');
-  }
-
-  function b64uEncode(bytes) {
-    let bin = '';
-    bytes = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-    for (const b of bytes) bin += String.fromCharCode(b);
-    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-  }
-
-  function b64uDecode(str) {
-    str = String(str || '').replace(/-/g, '+').replace(/_/g, '/');
-    while (str.length % 4) str += '=';
-    const bin = atob(str);
-    const out = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-    return out;
-  }
-
-  function encodeJSON(obj) {
-    return b64uEncode(enc.encode(JSON.stringify(obj)));
-  }
-  function decodeJSON(str) {
-    return JSON.parse(dec.decode(b64uDecode(str)));
-  }
-
-  function waitForTx(tx) {
-    return new Promise((resolve, reject) => {
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error || new Error('IndexedDB transaction failed'));
-      tx.onabort = () => reject(tx.error || new Error('IndexedDB transaction aborted'));
-    });
-  }
-
-  function dbRequest(req) {
-    return new Promise((resolve, reject) => {
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error || new Error('IndexedDB request failed'));
-    });
-  }
-
-  async function sha256Base64(inputBytes) {
-    const hash = await crypto.subtle.digest('SHA-256', inputBytes);
-    return b64uEncode(hash).slice(0, 16);
-  }
-
-  async function exportPublicKeyJwk(key) {
-    return crypto.subtle.exportKey('jwk', key);
-  }
-
-  async function importPublicKeyJwk(jwk, algo, usages) {
-    return crypto.subtle.importKey('jwk', jwk, algo, true, usages);
-  }
-
-  async function importPrivateKeyJwk(jwk, algo, usages) {
-    return crypto.subtle.importKey('jwk', jwk, algo, true, usages);
-  }
-
-  class RealDMSApp {
-    constructor() {
-      this.db = null;
-      this.identity = null;
-      this.contacts = [];
-      this.activeContactId = null;
-      this.peerConnection = null;
-      this.dataChannel = null;
-      this.pendingInvite = null;
-      this.pendingFile = null;
-      this.sessionKeys = new Map();
-      this.messagesCache = new Map();
-      this._bound = false;
-    }
-
-    async boot() {
-      try {
-        await this.openDB();
-        await this.loadIdentity();
-        await this.loadContacts();
-        this.bindUI();
-        this.renderSidebar();
-        this.selectInitialChat();
-        this.showSetupIfNeeded();
-      } catch (err) {
-        console.error(err);
-        showToast('Startup failed: ' + err.message, 6000);
-        $('meSub').textContent = 'Startup error';
-      }
-    }
-
-    async openDB() {
-      this.db = await new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, DB_VERSION);
-        req.onupgradeneeded = (e) => {
-          const db = e.target.result;
-          if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
-          if (!db.objectStoreNames.contains('contacts')) db.createObjectStore('contacts', { keyPath: 'id' });
-          if (!db.objectStoreNames.contains('messages')) {
-            const s = db.createObjectStore('messages', { keyPath: 'id' });
-            s.createIndex('byChat', 'chatId', { unique: false });
-            s.createIndex('byTime', 'ts', { unique: false });
-          }
-          if (!db.objectStoreNames.contains('sessions')) db.createObjectStore('sessions', { keyPath: 'chatId' });
-          if (!db.objectStoreNames.contains('drafts')) db.createObjectStore('drafts', { keyPath: 'key' });
-        };
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error || new Error('Could not open IndexedDB'));
-      });
-    }
-
-    async loadIdentity() {
-      const meta = await dbRequest(this.db.transaction('meta', 'readonly').objectStore('meta').get('identity'));
-      this.identity = meta?.value || null;
-      if (this.identity) {
-        $('setupModal').classList.remove('show');
-        this.fillIdentityUI();
-      }
-    }
-
-    async loadContacts() {
-      const tx = this.db.transaction('contacts', 'readonly');
-      const store = tx.objectStore('contacts');
-      const all = await dbRequest(store.getAll());
-      this.contacts = Array.isArray(all) ? all.sort((a,b) => (b.lastActivity||0)-(a.lastActivity||0)) : [];
-    }
-
-    bindUI() {
-      if (this._bound) return;
-      this._bound = true;
-
-      $('createIdentityBtn').addEventListener('click', () => this.createIdentity());
-      $('closeSetupBtn').addEventListener('click', () => $('setupModal').classList.remove('show'));
-      $('addPeerBtn').addEventListener('click', () => this.openPeerModal());
-      $('closePeerBtn').addEventListener('click', () => $('peerModal').classList.remove('show'));
-      $('identityBtn').addEventListener('click', () => this.openIdentityModal());
-      $('closeIdentityBtn').addEventListener('click', () => $('identityModal').classList.remove('show'));
-      $('createInviteBtn').addEventListener('click', () => this.createInvite());
-      $('copyInviteBtn').addEventListener('click', () => this.copyToClipboard($('inviteToken').value));
-      $('finalizeAnswerBtn').addEventListener('click', () => this.finalizeAnswer());
-      $('copyFinalInviteBtn').addEventListener('click', () => this.copyToClipboard($('inviteToken').value));
-      $('acceptOfferBtn').addEventListener('click', () => this.acceptOffer());
-      $('copyAnswerBtn').addEventListener('click', () => this.copyToClipboard($('answerToken').value));
-      $('sendBtn').addEventListener('click', () => this.sendComposer());
-      $('emojiBtn').addEventListener('click', () => this.insertEmoji());
-      $('attachBtn').addEventListener('click', () => $('fileInput').click());
-      $('fileInput').addEventListener('change', (e) => this.handleFileSelect(e));
-      $('sendFileBtn').addEventListener('click', () => this.sendSelectedFile());
-      $('removeFileBtn').addEventListener('click', () => this.clearSelectedFile());
-      $('closeFileBtn').addEventListener('click', () => $('fileModal').classList.remove('show'));
-      $('exportBackupBtn').addEventListener('click', () => this.exportBackup());
-      $('resetBtn').addEventListener('click', () => this.resetAll());
-      $('contactSearch').addEventListener('input', () => this.renderSidebar());
-      $('composerInput').addEventListener('input', () => this.autoGrowComposer());
-      $('composerInput').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          this.sendComposer();
-        }
-      });
-      $('mobileMenuBtn').addEventListener('click', () => $('sidebar').classList.toggle('open'));
-      window.addEventListener('beforeunload', () => {
-        try { this.peerConnection?.close(); } catch {}
-      });
-    }
-
-    showSetupIfNeeded() {
-      if (!this.identity) $('setupModal').classList.add('show');
-    }
-
-    async createIdentity() {
-      const username = $('usernameInput').value.trim();
-      const displayName = $('displayNameInput').value.trim() || username;
-      const bio = $('bioInput').value.trim();
-
-      if (!username) return showToast('Please choose a username.');
-      if (!/^[a-zA-Z0-9_.-]{3,24}$/.test(username)) {
-        return showToast('Username must be 3–24 chars: letters, numbers, _ . -');
-      }
-
-      const exists = this.contacts.some(c => c.username?.toLowerCase() === username.toLowerCase());
-      if (exists) return showToast('That username already exists in your local contacts.');
-
-      const signKeys = await crypto.subtle.generateKey(
-        { name: 'ECDSA', namedCurve: 'P-256' },
-        true,
-        ['sign', 'verify']
-      );
-      const kexKeys = await crypto.subtle.generateKey(
-        { name: 'ECDH', namedCurve: 'P-256' },
-        true,
-        ['deriveKey', 'deriveBits']
-      );
-
-      const signPub = await exportPublicKeyJwk(signKeys.publicKey);
-      const kexPub = await exportPublicKeyJwk(kexKeys.publicKey);
-      const fp = await sha256Base64(enc.encode(JSON.stringify(signPub)));
-
-      this.identity = {
-        id: 'identity',
-        username,
-        displayName,
-        bio,
-        avatarSeed: username.slice(0,2).toUpperCase(),
-        signPublicJwk: signPub,
-        signPrivateKey: signKeys.privateKey,
-        kexPublicJwk: kexPub,
-        kexPrivateKey: kexKeys.privateKey,
-        fingerprint: fp,
-        createdAt: Date.now()
-      };
-
-      const tx = this.db.transaction('meta', 'readwrite');
-      tx.objectStore('meta').put({ key: 'identity', value: this.identity });
-      await waitForTx(tx);
-
-      this.fillIdentityUI();
-      $('setupModal').classList.remove('show');
-      showToast('Identity created locally.');
-    }
-
-    fillIdentityUI() {
-      if (!this.identity) return;
-      $('meAvatar').textContent = this.identity.avatarSeed || '?';
-      $('meName').textContent = this.identity.displayName || this.identity.username || 'Me';
-      $('meSub').textContent = `@${this.identity.username} · ${this.identity.fingerprint}`;
-      $('idUsername').value = this.identity.username || '';
-      $('idDisplayName').value = this.identity.displayName || '';
-      $('idBio').value = this.identity.bio || '';
-      $('idFingerprint').value = this.identity.fingerprint || '';
-      $('statusPill').textContent = '● Ready for pairing';
-    }
-
-    async ensureIdentity() {
-      if (this.identity) return true;
-      $('setupModal').classList.add('show');
-      showToast('Create your identity first.');
-      return false;
-    }
-
-    renderSidebar(filter = '') {
-      const wrap = $('contacts');
-      wrap.innerHTML = '';
-      const q = filter.trim().toLowerCase();
-      const list = this.contacts.filter(c => !q || [c.username, c.displayName, c.bio].some(v => String(v||'').toLowerCase().includes(q)));
-
-      if (!list.length) {
-        wrap.innerHTML = `<div class="empty" style="margin:10px 6px">No contacts yet. Pair with a peer using an invite token.</div>`;
-        return;
-      }
-
-      for (const c of list) {
-        const el = document.createElement('button');
-        el.className = 'contact' + (c.id === this.activeContactId ? ' active' : '');
-        const dotClass = c.connected ? 'online' : c.pending ? 'pending' : '';
-        const preview = c.lastPreview || 'No messages yet';
-        el.innerHTML = `
-          <div class="avatar" style="width:42px;height:42px;background:${c.color || 'linear-gradient(135deg, #7c8cff, #5f73ff)'}">${(c.avatarSeed || c.username || '?').slice(0,2).toUpperCase()}</div>
-          <div class="info">
-            <div class="top">
-              <strong>${this.escapeHTML(c.displayName || c.username || 'Unknown')}</strong>
-              <span>${this.escapeHTML(c.username || '')}</span>
+    <div id="app-container">
+        <div class="sidebar">
+            <div class="profile-panel">
+                <div class="avatar" id="my-avatar">?</div>
+                <div class="profile-info">
+                    <h4 id="my-username">Loading...</h4>
+                    <span id="my-fp">Key Fingerprint</span>
+                </div>
             </div>
-            <div class="preview">${this.escapeHTML(preview)}</div>
-          </div>
-          <div class="dot ${dotClass}"></div>
-        `;
-        el.addEventListener('click', () => this.openChat(c.id));
-        wrap.appendChild(el);
-      }
+            <div style="padding: 10px; display: flex; gap: 5px;">
+                <button class="btn" style="flex:1; font-size: 12px; padding: 6px;" onclick="app.showConnectModal()">+ Add User</button>
+            </div>
+            <div class="contact-list" id="peers-list">
+                </div>
+        </div>
+
+        <div class="main-chat">
+            <div class="chat-header">
+                <div>
+                    <h3 id="active-chat-user">Select or Connect a Peer</h3>
+                    <p style="font-size: 11px; color: var(--text-muted);" id="active-chat-status"></p>
+                </div>
+            </div>
+            <div class="message-area" id="chat-messages">
+                <div class="message system">
+                    <div class="msg-text">No active session. Add a user, pair once, then chat from the left sidebar.</div>
+                </div>
+            </div>
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <input type="text" id="message-input" placeholder="Type an encrypted message..." onkeydown="if(event.key==='Enter') app.sendMessage()">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="connect-modal" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 600px;">
+            <h2 id="modal-title">Establish E2EE Channel</h2>
+            <div id="step-1">
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">Step 1: Generate your Connection Offer Token and send it to your peer.</p>
+                <button class="btn" onclick="app.generateOffer()">Create Offer Token</button>
+                <textarea id="sdp-output" readonly style="margin-top:10px; height:100px; font-family:monospace; font-size:11px;" placeholder="Your local network token will appear here..."></textarea>
+            </div>
+            <div id="step-2" style="margin-top:15px; border-top: 1px solid var(--border); padding-top:15px;">
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">Step 2: Paste your Peer's Response Token below to bind the connection.</p>
+                <textarea id="sdp-input" style="height:100px; font-family:monospace; font-size:11px;" placeholder="Paste peer response here..."></textarea>
+                <button class="btn" onclick="app.acceptAnswer()">Finalize Connection</button>
+            </div>
+            <button class="btn" style="background:transparent; color:var(--text-muted); margin-top:10px;" onclick="document.getElementById('connect-modal').classList.add('hidden')">Close</button>
+        </div>
+    </div>
+
+    
+<script>
+class RealDMS {
+    constructor() {
+        this.db = null;
+        this.localIdentity = null;
+        this.cryptoKeyPair = null;
+        this.peerConnection = null;
+        this.dataChannel = null;
+        this.pendingMessages = [];
+        this.activeContact = null;
+        this.contacts = [];
+        this.isPairingAsOfferer = false;
+        this.pairingContactId = null;
+        this.hintTimer = null;
+        this.mediaModeNoticeShown = false;
+        this.init();
     }
 
-    selectInitialChat() {
-      if (this.contacts.length) {
-        this.openChat(this.contacts[0].id);
-      } else {
-        this.renderEmptyChat();
-      }
+    async init() {
+        this.decorateUI();
+        await this.initStorage();
+        await this.loadLocalState();
+        this.bindGlobalShortcuts();
+        this.secureContextCheck();
     }
 
-    renderEmptyChat() {
-      $('chatTitle').textContent = 'No active chat';
-      $('chatSub').textContent = 'Create or import a peer invite to begin';
-      $('chatAvatar').textContent = '?';
-      $('messages').innerHTML = `
-        <div class="empty">
-          <h3 style="margin:0 0 8px">Real-DMS is ready</h3>
-          <div>Press <b>Add Peer</b> to exchange an invite token, then open the chat to send encrypted messages.</div>
-        </div>`;
-      $('composerHint').textContent = 'No active peer.';
+    decorateUI() {
+        const title = document.getElementById('modal-title');
+        if (title) title.textContent = 'Users / Pair Device';
+        const p1 = document.querySelector('#connect-modal #step-1 p');
+        const p2 = document.querySelector('#connect-modal #step-2 p');
+        if (p1) p1.textContent = 'Step 1: Create a short invite code and send it to the user you want to chat with.';
+        if (p2) p2.textContent = 'Step 2: Paste the user response code here to finish pairing.';
+        const out = document.getElementById('sdp-output');
+        if (out) out.placeholder = 'Your invite code appears here...';
+        const inp = document.getElementById('sdp-input');
+        if (inp) inp.placeholder = 'Paste the response code here...';
+        const btn = document.querySelector('.sidebar .btn');
+        if (btn) btn.textContent = '+ Add User';
     }
 
-    async openChat(chatId) {
-      const c = this.contacts.find(x => x.id === chatId);
-      if (!c) return;
-      this.activeContactId = chatId;
-      this.renderSidebar($('contactSearch').value);
-      $('chatTitle').textContent = c.displayName || c.username || 'Chat';
-      $('chatSub').textContent = `@${c.username || 'peer'} · ${c.status || 'local profile loaded'}`;
-      $('chatAvatar').textContent = (c.avatarSeed || c.username || '?').slice(0,2).toUpperCase();
-      $('composerHint').textContent = c.connected ? 'Encrypted channel available.' : 'Offline local history. Pair to send live messages.';
-      await this.ensureSessionKey(c.id).catch(()=>{});
-      await this.renderMessages(c.id);
-    }
-
-    async ensureSessionKey(chatId) {
-      const c = this.contacts.find(x => x.id === chatId);
-      if (!c?.remoteKexJwk || !this.identity?.kexPrivateKey) return null;
-      const remotePub = await importPublicKeyJwk(c.remoteKexJwk, { name: 'ECDH', namedCurve: 'P-256' }, []);
-      const key = await crypto.subtle.deriveKey(
-        { name: 'ECDH', public: remotePub },
-        this.identity.kexPrivateKey,
-        { name: 'AES-GCM', length: 256 },
-        false,
-        ['encrypt', 'decrypt']
-      );
-      this.sessionKeys.set(chatId, key);
-      return key;
-    }
-
-    async openPeerModal() {
-      if (!await this.ensureIdentity()) return;
-      $('peerModal').classList.add('show');
-      $('inviteToken').value = '';
-      $('answerToken').value = '';
-      $('incomingOffer').value = '';
-      this.preparePeerConnection();
-    }
-
-    async openIdentityModal() {
-      if (!await this.ensureIdentity()) return;
-      $('identityModal').classList.add('show');
-      this.fillIdentityUI();
-    }
-
-    preparePeerConnection() {
-      try { this.peerConnection?.close(); } catch {}
-      this.peerConnection = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-      this.peerConnection.onconnectionstatechange = () => {
-        const s = this.peerConnection?.connectionState || 'new';
-        $('statusPill').textContent = `● WebRTC ${s}`;
-      };
-      this.peerConnection.oniceconnectionstatechange = () => {
-        const s = this.peerConnection?.iceConnectionState || 'new';
-        $('statusPill').textContent = `● ICE ${s}`;
-      };
-      this.peerConnection.ondatachannel = (ev) => {
-        this.dataChannel = ev.channel;
-        this.attachChannelHandlers();
-      };
-    }
-
-    async createInvite() {
-      if (!await this.ensureIdentity()) return;
-      this.preparePeerConnection();
-      this.dataChannel = this.peerConnection.createDataChannel('real-dms', { ordered: true });
-      this.attachChannelHandlers();
-
-      const offer = await this.peerConnection.createOffer({ offerToReceiveAudio: false, offerToReceiveVideo: false });
-      await this.peerConnection.setLocalDescription(offer);
-      await this.waitIceGathering(this.peerConnection);
-
-      const payload = {
-        version: 2,
-        kind: 'offer',
-        sdp: this.peerConnection.localDescription,
-        identity: {
-          username: this.identity.username,
-          displayName: this.identity.displayName,
-          bio: this.identity.bio,
-          avatarSeed: this.identity.avatarSeed,
-          fingerprint: this.identity.fingerprint,
-          signPublicJwk: this.identity.signPublicJwk,
-          kexPublicJwk: this.identity.kexPublicJwk
+    secureContextCheck() {
+        if (!window.isSecureContext && !this.mediaModeNoticeShown) {
+            this.mediaModeNoticeShown = true;
+            this.setStatus('This page is not in a secure context. WebRTC may fail on file:// or content://.');
         }
-      };
-      $('inviteToken').value = encodeJSON(payload);
-      showToast('Offer token created. Send it to the peer.');
     }
 
-    async acceptOffer() {
-      if (!await this.ensureIdentity()) return;
-      const raw = $('incomingOffer').value.trim();
-      if (!raw) return showToast('Paste an offer token first.');
-      let payload;
-      try { payload = decodeJSON(raw); } catch { return showToast('Invalid token format.'); }
-      if (payload.kind !== 'offer' || !payload.sdp) return showToast('That token is not a valid offer.');
-
-      this.preparePeerConnection();
-      this.peerConnection.ondatachannel = (ev) => {
-        this.dataChannel = ev.channel;
-        this.attachChannelHandlers();
-      };
-
-      const remote = payload.identity || {};
-      const contact = await this.upsertContact({
-        username: remote.username || 'peer',
-        displayName: remote.displayName || remote.username || 'peer',
-        bio: remote.bio || '',
-        avatarSeed: remote.avatarSeed || (remote.username || '?').slice(0,2).toUpperCase(),
-        fingerprint: remote.fingerprint || '',
-        remoteSignJwk: remote.signPublicJwk || null,
-        remoteKexJwk: remote.kexPublicJwk || null,
-        pending: true,
-        status: 'Awaiting connection…'
-      });
-
-      await this.peerConnection.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-      const answer = await this.peerConnection.createAnswer();
-      await this.peerConnection.setLocalDescription(answer);
-      await this.waitIceGathering(this.peerConnection);
-
-      $('answerToken').value = encodeJSON({
-        version: 2,
-        kind: 'answer',
-        sdp: this.peerConnection.localDescription,
-        identity: {
-          username: this.identity.username,
-          displayName: this.identity.displayName,
-          bio: this.identity.bio,
-          avatarSeed: this.identity.avatarSeed,
-          fingerprint: this.identity.fingerprint,
-          signPublicJwk: this.identity.signPublicJwk,
-          kexPublicJwk: this.identity.kexPublicJwk
-        },
-        replyTo: remote.username || contact.username
-      });
-
-      await this.finishPairing(contact.id, remote, 'Answer created. Send it back to the offer creator.');
+    bindGlobalShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.getElementById('connect-modal')?.classList.add('hidden');
+            }
+        });
     }
 
-    async finishPairing(contactId, remoteIdentity, toastMsg) {
-      const contact = this.contacts.find(c => c.id === contactId);
-      if (!contact) return;
-      contact.remoteSignJwk = remoteIdentity?.signPublicJwk || contact.remoteSignJwk;
-      contact.remoteKexJwk = remoteIdentity?.kexPublicJwk || contact.remoteKexJwk;
-      contact.pending = true;
-      contact.status = 'Pairing…';
-      contact.lastActivity = Date.now();
-      await this.saveContact(contact);
-      await this.ensureSessionKey(contact.id).catch(()=>{});
-      this.renderSidebar($('contactSearch').value);
-      if (toastMsg) showToast(toastMsg);
+    setStatus(text) {
+        const el = document.getElementById('active-chat-status');
+        if (el) el.textContent = text;
     }
 
-    async acceptAnswerFromToken(raw) {
-      const payload = decodeJSON(raw);
-      if (payload.kind !== 'answer' || !payload.sdp) throw new Error('Not an answer token.');
-      await this.peerConnection.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-      const remote = payload.identity || {};
-      const contact = await this.upsertContact({
-        username: remote.username || 'peer',
-        displayName: remote.displayName || remote.username || 'peer',
-        bio: remote.bio || '',
-        avatarSeed: remote.avatarSeed || (remote.username || '?').slice(0,2).toUpperCase(),
-        fingerprint: remote.fingerprint || '',
-        remoteSignJwk: remote.signPublicJwk || null,
-        remoteKexJwk: remote.kexPublicJwk || null,
-        pending: false,
-        connected: true,
-        status: 'Connected'
-      });
-      await this.ensureSessionKey(contact.id).catch(()=>{});
-      return contact;
+    toast(text) {
+        const existing = document.querySelector('.toast');
+        if (existing) existing.remove();
+        const el = document.createElement('div');
+        el.className = 'toast';
+        el.textContent = text;
+        el.style.cssText = 'position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:rgba(30,31,34,.96);color:#fff;padding:12px 16px;border-radius:16px;border:1px solid rgba(255,255,255,.08);z-index:9999;max-width:92vw;box-shadow:0 10px 30px rgba(0,0,0,.35);font-size:14px;';
+        document.body.appendChild(el);
+        clearTimeout(this.hintTimer);
+        this.hintTimer = setTimeout(() => el.remove(), 2600);
     }
 
-    async finalizeAnswer() {
-      const raw = $('finalAnswerToken').value.trim();
-      if (!raw) return showToast('Paste the answer token first.');
-      try {
-        const contact = await this.acceptAnswerFromToken(raw);
-        $('peerModal').classList.remove('show');
-        this.activeContactId = contact.id;
-        this.renderSidebar($('contactSearch').value);
-        await this.openChat(contact.id);
-        showToast('Peer connected successfully.');
-      } catch (err) {
-        console.error(err);
-        showToast(err.message || 'Could not finalize connection.');
-      }
+    async initStorage() {
+        this.db = await new Promise((resolve, reject) => {
+            const request = indexedDB.open('RealDMS_Engine_v2', 2);
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('identity')) db.createObjectStore('identity', { keyPath: 'id' });
+                if (!db.objectStoreNames.contains('contacts')) db.createObjectStore('contacts', { keyPath: 'id' });
+                if (!db.objectStoreNames.contains('messages')) {
+                    const s = db.createObjectStore('messages', { keyPath: 'msgId' });
+                    s.createIndex('byContactTime', ['contactId', 'timestamp'], { unique: false });
+                }
+                if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings', { keyPath: 'id' });
+            };
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
     }
 
-    async waitIceGathering(pc) {
-      if (pc.iceGatheringState === 'complete') return;
-      await new Promise((resolve) => {
-        const onState = () => {
-          if (pc.iceGatheringState === 'complete') {
-            pc.removeEventListener('icegatheringstatechange', onState);
-            resolve();
-          }
+    tx(store, mode = 'readonly') {
+        return this.db.transaction(store, mode).objectStore(store);
+    }
+
+    async get(store, key) {
+        return await new Promise((resolve, reject) => {
+            const req = this.tx(store).get(key);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async put(store, value) {
+        return await new Promise((resolve, reject) => {
+            const req = this.tx(store, 'readwrite').put(value);
+            req.onsuccess = () => resolve(value);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async getAll(store) {
+        return await new Promise((resolve, reject) => {
+            const req = this.tx(store).getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async loadLocalState() {
+        this.localIdentity = await this.get('identity', 'local');
+        this.contacts = await this.getAll('contacts');
+        if (this.localIdentity) {
+            document.getElementById('setup-modal').classList.add('hidden');
+            this.renderIdentityUI();
+            this.renderContacts();
+            this.showEmptyChat();
+        }
+    }
+
+    async initIdentity() {
+        const username = document.getElementById('username-input').value.trim();
+        if (!username) return alert('Username required');
+
+        this.cryptoKeyPair = await crypto.subtle.generateKey(
+            { name: 'ECDSA', namedCurve: 'P-256' },
+            true,
+            ['sign', 'verify']
+        );
+
+        const exported = await crypto.subtle.exportKey('spki', this.cryptoKeyPair.publicKey);
+        const hash = await crypto.subtle.digest('SHA-256', exported);
+        const fingerprint = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 12);
+
+        this.localIdentity = {
+            id: 'local',
+            username,
+            displayName: username,
+            fingerprint,
+            createdAt: Date.now()
         };
-        pc.addEventListener('icegatheringstatechange', onState);
-        onState();
-      });
+
+        await this.put('identity', this.localIdentity);
+        document.getElementById('setup-modal').classList.add('hidden');
+        this.renderIdentityUI();
+        this.renderContacts();
+        this.showEmptyChat();
+        this.toast('Identity created locally');
     }
 
-    attachChannelHandlers() {
-      if (!this.dataChannel) return;
-      this.dataChannel.onopen = async () => {
-        const c = this.getActiveContact();
-        if (c) {
-          c.connected = true;
-          c.pending = false;
-          c.status = 'Connected';
-          c.lastActivity = Date.now();
-          await this.saveContact(c);
-          this.renderSidebar($('contactSearch').value);
-          $('chatSub').textContent = `@${c.username} · Live encrypted session`;
-        }
-        $('statusPill').textContent = '● E2EE live';
-        showToast('Peer connection is live.');
-      };
+    renderIdentityUI() {
+        if (!this.localIdentity) return;
+        const u = this.localIdentity.username || 'User';
+        document.getElementById('my-username').textContent = u;
+        document.getElementById('my-avatar').textContent = u.charAt(0).toUpperCase();
+        document.getElementById('my-fp').textContent = `ID: ${this.localIdentity.fingerprint}`;
+    }
 
-      this.dataChannel.onmessage = async (ev) => {
+    async addContact(contact) {
+        const normalized = {
+            id: contact.id || crypto.randomUUID(),
+            username: contact.username,
+            displayName: contact.displayName || contact.username,
+            fingerprint: contact.fingerprint || '',
+            avatar: contact.avatar || (contact.username?.charAt(0).toUpperCase() || '?'),
+            status: contact.status || 'offline',
+            lastSeen: contact.lastSeen || Date.now(),
+            pairingState: contact.pairingState || 'saved'
+        };
+        await this.put('contacts', normalized);
+        this.contacts = await this.getAll('contacts');
+        this.renderContacts();
+        return normalized;
+    }
+
+    async updateContact(id, patch) {
+        const current = await this.get('contacts', id);
+        if (!current) return null;
+        const updated = { ...current, ...patch };
+        await this.put('contacts', updated);
+        this.contacts = await this.getAll('contacts');
+        this.renderContacts();
+        return updated;
+    }
+
+    renderContacts() {
+        const list = document.getElementById('peers-list');
+        if (!list) return;
+        list.innerHTML = '';
+
+        const header = document.createElement('div');
+        header.style.cssText = 'padding:6px 10px 12px;color:var(--text-muted);font-size:12px;letter-spacing:.04em;text-transform:uppercase;';
+        header.textContent = 'Users';
+        list.appendChild(header);
+
+        if (!this.contacts.length) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'padding:12px 10px;color:var(--text-muted);font-size:13px;line-height:1.4;';
+            empty.textContent = 'No users yet. Pair one device and it will appear here.';
+            list.appendChild(empty);
+            return;
+        }
+
+        this.contacts.forEach(contact => {
+            const item = document.createElement('div');
+            item.className = 'contact-item' + (this.activeContact?.id === contact.id ? ' active' : '');
+            item.innerHTML = `
+                <div class="avatar">${contact.avatar || contact.username.charAt(0).toUpperCase()}</div>
+                <div style="min-width:0;flex:1;">
+                    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
+                        <strong style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.escapeHTML(contact.displayName || contact.username)}</strong>
+                        <span style="font-size:11px;color:var(--text-muted);">${contact.status || 'offline'}</span>
+                    </div>
+                    <div style="font-size:12px;color:var(--text-muted);font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.escapeHTML(contact.fingerprint || 'unpaired')}</div>
+                </div>`;
+            item.onclick = () => this.openContact(contact.id);
+            list.appendChild(item);
+        });
+    }
+
+    async openContact(contactId) {
+        const contact = await this.get('contacts', contactId);
+        if (!contact) return;
+        this.activeContact = contact;
+        document.getElementById('active-chat-user').textContent = contact.displayName || contact.username;
+        this.setStatus(contact.status === 'online' ? 'Connected' : 'Ready to pair');
+        this.renderContacts();
+        await this.renderMessagesForContact(contact.id);
+    }
+
+    showEmptyChat() {
+        document.getElementById('active-chat-user').textContent = 'Select or add a user';
+        this.setStatus('No active session');
+        const container = document.getElementById('chat-messages');
+        container.innerHTML = `
+            <div class="message system">
+                <div class="msg-text">Add a user from the left, pair once, then chat normally here.</div>
+            </div>`;
+    }
+
+    showConnectModal() {
+        const modal = document.getElementById('connect-modal');
+        modal.classList.remove('hidden');
+        const title = document.getElementById('modal-title');
+        if (title) title.textContent = this.activeContact ? `Pair with ${this.activeContact.displayName || this.activeContact.username}` : 'Add User / Pair Device';
+        this.preparePairing();
+    }
+
+    async preparePairing() {
         try {
-          const envelope = JSON.parse(ev.data);
-          await this.handleEnvelope(envelope, false);
+            await this.closePeerConnection();
+            const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+            this.peerConnection = new RTCPeerConnection(config);
+            this.peerConnection.onicecandidate = () => this.maybePublishLocalToken();
+            this.peerConnection.oniceconnectionstatechange = () => {
+                const state = this.peerConnection?.iceConnectionState || 'new';
+                this.setStatus(`ICE: ${state}`);
+            };
+            this.peerConnection.onconnectionstatechange = () => {
+                const state = this.peerConnection?.connectionState || 'new';
+                this.setStatus(`Connection: ${state}`);
+                if (state === 'connected') {
+                    this.onChannelReady();
+                }
+                if (state === 'failed' || state === 'disconnected' || state === 'closed') {
+                    this.toast(`Connection ${state}`);
+                }
+            };
+            this.peerConnection.ondatachannel = (e) => {
+                this.dataChannel = e.channel;
+                this.attachChannelEvents();
+            };
+            this.isPairingAsOfferer = true;
+            this.pairingContactId = null;
+            this.pendingMessages = [];
         } catch (err) {
-          console.error(err);
-          showToast('Received a malformed message.');
+            console.error(err);
+            this.toast('WebRTC init failed');
         }
-      };
-
-      this.dataChannel.onclose = () => {
-        const c = this.getActiveContact();
-        if (c) {
-          c.connected = false;
-          c.status = 'Disconnected';
-          this.saveContact(c);
-        }
-        $('statusPill').textContent = '● Disconnected';
-      };
     }
 
-    getActiveContact() {
-      return this.contacts.find(c => c.id === this.activeContactId) || null;
+    async createOffer() {
+        if (!this.peerConnection) await this.preparePairing();
+        if (!this.peerConnection) return;
+        this.dataChannel = this.peerConnection.createDataChannel('real-dms', { ordered: true });
+        this.attachChannelEvents();
+        const offer = await this.peerConnection.createOffer({ offerToReceiveAudio: false, offerToReceiveVideo: false });
+        await this.peerConnection.setLocalDescription(offer);
+        await this.waitForIceGathering();
+        await this.maybePublishLocalToken();
+        this.toast('Invite code created');
     }
 
-    async upsertContact(data) {
-      let c = this.contacts.find(x => x.username && x.username.toLowerCase() === String(data.username || '').toLowerCase());
-      if (!c) {
-        c = {
-          id: uid(),
-          username: data.username || `peer-${Math.random().toString(16).slice(2,6)}`,
-          displayName: data.displayName || data.username || 'Peer',
-          bio: data.bio || '',
-          avatarSeed: data.avatarSeed || (data.username || '?').slice(0,2).toUpperCase(),
-          fingerprint: data.fingerprint || '',
-          remoteSignJwk: data.remoteSignJwk || null,
-          remoteKexJwk: data.remoteKexJwk || null,
-          connected: !!data.connected,
-          pending: !!data.pending,
-          status: data.status || 'Local profile',
-          lastActivity: Date.now(),
-          lastPreview: ''
+    async acceptAnswer() {
+        const tokenString = document.getElementById('sdp-input').value.trim();
+        if (!tokenString) return this.toast('Paste a code first');
+        let remote;
+        try {
+            remote = this.decodeToken(tokenString);
+        } catch (e) {
+            console.error(e);
+            return this.toast('Invalid code');
+        }
+
+        if (!this.peerConnection) await this.preparePairing();
+        if (!this.peerConnection) return;
+
+        if (remote?.kind === 'offer') {
+            this.isPairingAsOfferer = false;
+            this.pairingContactId = remote.contactId || null;
+            this.activeContact = this.activeContact || {
+                id: remote.contactId || crypto.randomUUID(),
+                username: remote.username || 'Peer',
+                displayName: remote.displayName || remote.username || 'Peer',
+                fingerprint: remote.fingerprint || '',
+                status: 'pairing'
+            };
+
+            await this.peerConnection.setRemoteDescription(remote.sdp);
+            const answer = await this.peerConnection.createAnswer();
+            await this.peerConnection.setLocalDescription(answer);
+            await this.waitForIceGathering();
+            const answerToken = this.encodeToken({
+                kind: 'answer',
+                sdp: this.peerConnection.localDescription,
+                username: this.localIdentity.username,
+                displayName: this.localIdentity.displayName || this.localIdentity.username,
+                fingerprint: this.localIdentity.fingerprint,
+                contactId: this.activeContact.id
+            });
+            document.getElementById('sdp-output').value = answerToken;
+            await this.addOrUpdateContactFromRemote(remote);
+            this.setStatus('Answer ready');
+            this.toast('Send the response code back');
+            return;
+        }
+
+        if (remote?.kind === 'answer') {
+            await this.peerConnection.setRemoteDescription(remote.sdp);
+            await this.addOrUpdateContactFromRemote(remote);
+            this.setStatus('Finalizing connection');
+            this.toast('Connection is being established');
+            return;
+        }
+
+        this.toast('Unsupported code');
+    }
+
+    async acceptRemoteOffer() {
+        // kept for UI compatibility if hooked later
+        return this.acceptAnswer();
+    }
+
+    async addOrUpdateContactFromRemote(remote) {
+        const contactId = remote.contactId || crypto.randomUUID();
+        const contact = {
+            id: contactId,
+            username: remote.username || 'Peer',
+            displayName: remote.displayName || remote.username || 'Peer',
+            fingerprint: remote.fingerprint || '',
+            avatar: (remote.displayName || remote.username || 'P').charAt(0).toUpperCase(),
+            status: 'online',
+            lastSeen: Date.now(),
+            pairingState: 'paired'
         };
-        this.contacts.unshift(c);
-      } else {
-        Object.assign(c, data, { lastActivity: Date.now() });
-      }
-      await this.saveContact(c);
-      this.contacts.sort((a,b) => (b.lastActivity||0)-(a.lastActivity||0));
-      this.renderSidebar($('contactSearch').value);
-      return c;
+        await this.put('contacts', contact);
+        this.contacts = await this.getAll('contacts');
+        this.renderContacts();
+        this.activeContact = contact;
+        document.getElementById('active-chat-user').textContent = contact.displayName || contact.username;
+        this.setStatus('Secure channel ready');
+        await this.renderMessagesForContact(contact.id);
     }
 
-    async saveContact(c) {
-      const tx = this.db.transaction('contacts', 'readwrite');
-      tx.objectStore('contacts').put(c);
-      await waitForTx(tx);
+    encodeToken(payload) {
+        const json = JSON.stringify(payload);
+        return btoa(unescape(encodeURIComponent(json)));
     }
 
-    async saveMessage(msg) {
-      const tx = this.db.transaction('messages', 'readwrite');
-      tx.objectStore('messages').put(msg);
-      await waitForTx(tx);
+    decodeToken(token) {
+        const json = decodeURIComponent(escape(atob(token)));
+        return JSON.parse(json);
     }
 
-    async updateMessage(msg) {
-      const tx = this.db.transaction('messages', 'readwrite');
-      tx.objectStore('messages').put(msg);
-      await waitForTx(tx);
+    async maybePublishLocalToken() {
+        if (!this.peerConnection || !this.peerConnection.localDescription) return;
+        if (this.peerConnection.iceGatheringState !== 'complete') return;
+        const ld = this.peerConnection.localDescription;
+        const token = this.encodeToken({
+            kind: ld.type === 'offer' ? 'offer' : 'answer',
+            sdp: ld,
+            username: this.localIdentity.username,
+            displayName: this.localIdentity.displayName || this.localIdentity.username,
+            fingerprint: this.localIdentity.fingerprint,
+            contactId: this.activeContact?.id || crypto.randomUUID()
+        });
+        const out = document.getElementById('sdp-output');
+        if (out) out.value = token;
     }
 
-    async loadMessages(chatId) {
-      const tx = this.db.transaction('messages', 'readonly');
-      const idx = tx.objectStore('messages').index('byChat');
-      return await dbRequest(idx.getAll(chatId));
+    async waitForIceGathering(timeoutMs = 5000) {
+        if (!this.peerConnection) return;
+        if (this.peerConnection.iceGatheringState === 'complete') return;
+        await new Promise((resolve) => {
+            const pc = this.peerConnection;
+            const done = () => {
+                pc.removeEventListener('icegatheringstatechange', done);
+                resolve();
+            };
+            pc.addEventListener('icegatheringstatechange', () => {
+                if (pc.iceGatheringState === 'complete') done();
+            });
+            setTimeout(done, timeoutMs);
+        });
     }
 
-    async renderMessages(chatId) {
-      const msgs = await this.loadMessages(chatId);
-      const area = $('messages');
-      area.innerHTML = '';
-      const sorted = msgs.sort((a,b) => a.ts - b.ts);
-
-      if (!sorted.length) {
-        area.innerHTML = `<div class="empty"><h3 style="margin:0 0 8px">No messages yet</h3><div>This chat is ready. Send the first encrypted message or attach a file.</div></div>`;
-        return;
-      }
-
-      for (const msg of sorted.slice(-300)) {
-        area.appendChild(this.renderMessageNode(msg));
-      }
-      area.scrollTop = area.scrollHeight;
+    attachChannelEvents() {
+        if (!this.dataChannel) return;
+        this.dataChannel.onopen = () => {
+            this.onChannelReady();
+        };
+        this.dataChannel.onclose = () => {
+            this.setStatus('Channel closed');
+        };
+        this.dataChannel.onerror = (e) => {
+            console.error('DataChannel error', e);
+            this.setStatus('DataChannel error');
+        };
+        this.dataChannel.onmessage = (e) => this.handleIncomingMessage(e.data);
     }
 
-    renderMessageNode(msg) {
-      const row = document.createElement('div');
-      row.className = 'bubble-row' + (msg.fromMe ? ' me' : '');
-      const bubble = document.createElement('div');
-      bubble.className = 'bubble' + (msg.fromMe ? ' me' : '');
-
-      const title = msg.fromMe ? (this.identity?.displayName || this.identity?.username || 'Me') : (msg.senderName || 'Peer');
-      const meta = `
-        <div class="meta">
-          <span class="name">${this.escapeHTML(title)}</span>
-          <span>${this.escapeHTML(nowFromTs(msg.ts))}</span>
-          ${msg.edited ? '<span>edited</span>' : ''}
-          ${msg.deleted ? '<span>deleted</span>' : ''}
-        </div>`;
-
-      let content = '';
-      if (msg.deleted) {
-        content = `<div class="text" style="color:var(--muted)">This message was deleted.</div>`;
-      } else if (msg.kind === 'file') {
-        const isImage = (msg.fileMime || '').startsWith('image/');
-        const fileName = this.escapeHTML(msg.fileName || 'file');
-        content = isImage
-          ? `<div class="attachment"><img src="${msg.fileDataUrl}" alt="${fileName}"></div>`
-          : `<div class="attachment"><a download="${fileName}" href="${msg.fileDataUrl}">📎 ${fileName}</a></div>`;
-      } else {
-        content = `<div class="text">${this.escapeHTML(msg.text || '')}</div>`;
-      }
-
-      const reply = msg.replyTo ? `<div class="chip">↩ Reply to ${this.escapeHTML(msg.replyPreview || 'message')}</div>` : '';
-      const reacts = msg.reactions?.length ? `<div class="msg-tools">${msg.reactions.map(r => `<span class="chip">${this.escapeHTML(r)}</span>`).join('')}</div>` : '';
-
-      const actions = msg.fromMe && !msg.deleted ? `
-        <div class="msg-tools">
-          <button class="chip" data-act="reply">Reply</button>
-          <button class="chip" data-act="react">React</button>
-          <button class="chip" data-act="edit">Edit</button>
-          <button class="chip" data-act="delete">Delete</button>
-        </div>` : `
-        <div class="msg-tools">
-          <button class="chip" data-act="reply">Reply</button>
-          <button class="chip" data-act="react">React</button>
-        </div>`;
-
-      bubble.innerHTML = meta + reply + content + reacts + actions;
-      bubble.querySelectorAll('[data-act]').forEach(btn => {
-        btn.addEventListener('click', () => this.messageAction(msg, btn.dataset.act));
-      });
-      row.appendChild(bubble);
-      return row;
+    async onChannelReady() {
+        document.getElementById('connect-modal')?.classList.add('hidden');
+        if (this.activeContact) {
+            await this.updateContact(this.activeContact.id, { status: 'online', lastSeen: Date.now() });
+            this.activeContact = await this.get('contacts', this.activeContact.id);
+            document.getElementById('active-chat-user').textContent = this.activeContact.displayName || this.activeContact.username;
+        }
+        this.setStatus('Session established');
+        this.toast('Connected');
+        while (this.pendingMessages.length) {
+            const msg = this.pendingMessages.shift();
+            this.dataChannel?.send(msg);
+        }
     }
 
-    async messageAction(msg, act) {
-      if (!msg || !this.activeContactId) return;
-      if (act === 'react') {
-        const emoji = prompt('Reaction emoji', '👍');
-        if (!emoji) return;
-        await this.appendReaction(msg.id, emoji);
-        return;
-      }
-      if (act === 'reply') {
-        $('composerInput').value = `> ${msg.kind === 'file' ? (msg.fileName || 'file') : (msg.text || '').slice(0,80)}\n`;
-        $('composerInput').focus();
-        return;
-      }
-      if (act === 'edit' && msg.fromMe && msg.kind === 'text' && !msg.deleted) {
-        const edited = prompt('Edit message', msg.text || '');
-        if (edited == null) return;
-        msg.text = edited;
-        msg.edited = true;
-        await this.sendEnvelope({ type: 'edit', id: msg.id, text: edited });
-        await this.updateMessage(msg);
-        await this.renderMessages(this.activeContactId);
-        return;
-      }
-      if (act === 'delete' && msg.fromMe && !msg.deleted) {
-        msg.deleted = true;
-        await this.sendEnvelope({ type: 'delete', id: msg.id });
-        await this.updateMessage(msg);
-        await this.renderMessages(this.activeContactId);
-        return;
-      }
-      if (act === 'react') {
-        const emoji = prompt('Reaction emoji', '👍');
-        if (!emoji) return;
-        await this.appendReaction(msg.id, emoji);
-      }
+    async handleIncomingMessage(raw) {
+        let payload = null;
+        try {
+            payload = JSON.parse(raw);
+        } catch {
+            payload = { kind: 'msg', text: String(raw) };
+        }
+
+        if (payload.kind === 'msg') {
+            const contact = await this.ensureActiveContactFromPayload(payload);
+            await this.saveMessage(contact.id, payload.text, false, payload.id || crypto.randomUUID());
+            this.appendMessage(contact.displayName || contact.username || 'Peer', payload.text, false);
+            return;
+        }
+        if (payload.kind === 'ping') return;
     }
 
-    async appendReaction(messageId, emoji) {
-      const msgs = await this.loadMessages(this.activeContactId);
-      const msg = msgs.find(m => m.id === messageId);
-      if (!msg) return;
-      msg.reactions = Array.from(new Set([...(msg.reactions || []), emoji]));
-      await this.updateMessage(msg);
-      await this.sendEnvelope({ type: 'react', id: msg.id, emoji });
-      await this.renderMessages(this.activeContactId);
+    async ensureActiveContactFromPayload(payload) {
+        if (this.activeContact) return this.activeContact;
+        const contact = {
+            id: payload.contactId || crypto.randomUUID(),
+            username: payload.from || 'Peer',
+            displayName: payload.from || 'Peer',
+            fingerprint: payload.fromFp || '',
+            avatar: (payload.from || 'P').charAt(0).toUpperCase(),
+            status: 'online',
+            lastSeen: Date.now(),
+            pairingState: 'paired'
+        };
+        await this.put('contacts', contact);
+        this.contacts = await this.getAll('contacts');
+        this.renderContacts();
+        this.activeContact = contact;
+        document.getElementById('active-chat-user').textContent = contact.displayName || contact.username;
+        return contact;
     }
 
-    async handleEnvelope(envelope, isLocal) {
-      const chatId = this.activeContactId;
-      if (!chatId) return;
+    async sendMessage() {
+        const input = document.getElementById('message-input');
+        const text = input.value.trim();
+        if (!text) return;
+        if (!this.activeContact) return this.toast('Select a user first');
 
-      const contact = this.getActiveContact();
-      if (!contact) return;
-
-      if (envelope.type === 'msg') {
-        const plain = await this.decryptEnvelope(chatId, envelope);
         const msg = {
-          id: envelope.id || uid(),
-          chatId,
-          ts: envelope.ts || Date.now(),
-          fromMe: !!isLocal,
-          kind: plain.kind || 'text',
-          text: plain.text || '',
-          fileName: plain.fileName || '',
-          fileMime: plain.fileMime || '',
-          fileDataUrl: plain.fileDataUrl || '',
-          senderName: isLocal ? this.identity.displayName : contact.displayName,
-          replyTo: plain.replyTo || null,
-          replyPreview: plain.replyPreview || '',
-          reactions: plain.reactions || [],
-          deleted: false,
-          edited: false
+            kind: 'msg',
+            id: crypto.randomUUID(),
+            from: this.localIdentity.username,
+            fromFp: this.localIdentity.fingerprint,
+            contactId: this.activeContact.id,
+            text,
+            timestamp: Date.now()
         };
-        await this.saveMessage(msg);
-        await this.updateContactPreview(chatId, this.previewForMessage(msg), true);
-        await this.renderMessages(chatId);
-        return;
-      }
 
-      if (envelope.type === 'edit') {
-        const msgs = await this.loadMessages(chatId);
-        const m = msgs.find(x => x.id === envelope.id);
-        if (m) {
-          m.text = envelope.text || m.text;
-          m.edited = true;
-          await this.updateMessage(m);
-          await this.renderMessages(chatId);
+        await this.saveMessage(this.activeContact.id, text, true, msg.id);
+        this.appendMessage(this.localIdentity.username, text, true);
+        input.value = '';
+
+        const payload = JSON.stringify(msg);
+        if (this.dataChannel && this.dataChannel.readyState === 'open') {
+            this.dataChannel.send(payload);
+        } else {
+            this.pendingMessages.push(payload);
+            this.toast('Queued until the peer is ready');
         }
-        return;
-      }
-
-      if (envelope.type === 'delete') {
-        const msgs = await this.loadMessages(chatId);
-        const m = msgs.find(x => x.id === envelope.id);
-        if (m) {
-          m.deleted = true;
-          await this.updateMessage(m);
-          await this.renderMessages(chatId);
-        }
-        return;
-      }
-
-      if (envelope.type === 'react') {
-        const msgs = await this.loadMessages(chatId);
-        const m = msgs.find(x => x.id === envelope.id);
-        if (m) {
-          m.reactions = Array.from(new Set([...(m.reactions || []), envelope.emoji || '👍']));
-          await this.updateMessage(m);
-          await this.renderMessages(chatId);
-        }
-      }
     }
 
-    previewForMessage(msg) {
-      if (msg.deleted) return 'Deleted a message';
-      if (msg.kind === 'file') return `📎 ${msg.fileName || 'file'}`;
-      return msg.text || '';
-    }
-
-    async updateContactPreview(chatId, preview, sortIt = false) {
-      const c = this.contacts.find(x => x.id === chatId);
-      if (!c) return;
-      c.lastPreview = preview;
-      c.lastActivity = Date.now();
-      if (sortIt) this.contacts.sort((a,b) => (b.lastActivity||0)-(a.lastActivity||0));
-      await this.saveContact(c);
-      this.renderSidebar($('contactSearch').value);
-    }
-
-    async sendEnvelope(obj) {
-      const c = this.getActiveContact();
-      if (!c) throw new Error('No active contact');
-      if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
-        showToast('No live connection. Message saved locally only.');
-        return false;
-      }
-      const envelope = {
-        type: obj.type,
-        id: obj.id || uid(),
-        ts: Date.now()
-      };
-      if (obj.type === 'msg') {
-        const cipher = await this.encryptForChat(this.activeContactId, obj.payload);
-        Object.assign(envelope, cipher);
-      } else {
-        Object.assign(envelope, obj);
-      }
-      this.dataChannel.send(JSON.stringify(envelope));
-      return true;
-    }
-
-    async sendComposer() {
-      if (!this.identity) return await this.ensureIdentity();
-      const c = this.getActiveContact();
-      if (!c) return showToast('Open or create a peer chat first.');
-      const text = $('composerInput').value.trim();
-      if (!text && !this.pendingFile) return;
-
-      if (this.pendingFile) {
-        await this.sendSelectedFile();
-        return;
-      }
-
-      const msgId = uid();
-      const payload = { kind: 'text', text };
-      const sent = await this.sendEnvelope({ type: 'msg', id: msgId, payload });
-      const localMsg = {
-        id: msgId,
-        chatId: c.id,
-        ts: Date.now(),
-        fromMe: true,
-        kind: 'text',
-        text,
-        senderName: this.identity.displayName,
-        reactions: [],
-        deleted: false,
-        edited: false
-      };
-      await this.saveMessage(localMsg);
-      await this.updateContactPreview(c.id, text, true);
-      $('composerInput').value = '';
-      this.autoGrowComposer();
-      await this.renderMessages(c.id);
-      if (!sent) showToast('Saved locally; deliver when the peer reconnects.');
-    }
-
-    async encryptForChat(chatId, payload) {
-      const key = await this.ensureSessionKey(chatId);
-      if (!key) throw new Error('No session key available.');
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const plain = enc.encode(JSON.stringify(payload));
-      const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plain);
-      return { iv: b64uEncode(iv), ciphertext: b64uEncode(ct) };
-    }
-
-    async decryptEnvelope(chatId, envelope) {
-      const key = await this.ensureSessionKey(chatId);
-      if (!key) throw new Error('No session key available.');
-      const iv = b64uDecode(envelope.iv);
-      const ct = b64uDecode(envelope.ciphertext);
-      const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
-      return JSON.parse(dec.decode(plain));
-    }
-
-    async handleIncomingRawMessage(raw) {
-      const obj = JSON.parse(raw);
-      if (obj.type === 'msg' || obj.type === 'edit' || obj.type === 'delete' || obj.type === 'react') {
-        await this.handleEnvelope(obj, false);
-      }
-    }
-
-    async sendSelectedFile() {
-      const c = this.getActiveContact();
-      if (!c) return showToast('Open a chat first.');
-      if (!this.pendingFile) return showToast('No file selected.');
-      const { fileName, fileMime, dataUrl, size } = this.pendingFile;
-      if (size > MAX_ATTACHMENT_BYTES) return showToast(`File too large. Max ${Math.round(MAX_ATTACHMENT_BYTES/1000000)} MB in this build.`);
-
-      const msgId = uid();
-      const payload = { kind: 'file', fileName, fileMime, fileDataUrl: dataUrl };
-      const sent = await this.sendEnvelope({ type: 'msg', id: msgId, payload });
-      const localMsg = {
-        id: msgId,
-        chatId: c.id,
-        ts: Date.now(),
-        fromMe: true,
-        kind: 'file',
-        fileName,
-        fileMime,
-        fileDataUrl: dataUrl,
-        senderName: this.identity.displayName,
-        reactions: [],
-        deleted: false,
-        edited: false
-      };
-      await this.saveMessage(localMsg);
-      await this.updateContactPreview(c.id, `📎 ${fileName}`, true);
-      this.clearSelectedFile();
-      $('fileModal').classList.remove('show');
-      await this.renderMessages(c.id);
-      if (!sent) showToast('Saved locally; file will send when the peer reconnects.');
-    }
-
-    handleFileSelect(ev) {
-      const file = ev.target.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        this.pendingFile = {
-          fileName: file.name,
-          fileMime: file.type || 'application/octet-stream',
-          size: file.size,
-          dataUrl: reader.result
+    async saveMessage(contactId, text, isMe, msgId) {
+        if (!contactId) return;
+        const record = {
+            msgId: msgId || crypto.randomUUID(),
+            contactId,
+            text,
+            isMe,
+            timestamp: Date.now()
         };
-        $('fileName').value = file.name;
-        $('fileInfo').textContent = `${file.type || 'unknown type'} · ${(file.size/1024).toFixed(1)} KB`;
-        $('fileModal').classList.add('show');
-      };
-      reader.readAsDataURL(file);
-      ev.target.value = '';
+        await this.put('messages', record);
     }
 
-    clearSelectedFile() {
-      this.pendingFile = null;
-      $('fileName').value = '';
-      $('fileInfo').textContent = 'No file selected.';
-      $('fileModal').classList.remove('show');
+    async renderMessagesForContact(contactId) {
+        const container = document.getElementById('chat-messages');
+        container.innerHTML = '';
+        const all = await this.getAll('messages');
+        const msgs = all.filter(m => m.contactId === contactId).sort((a, b) => a.timestamp - b.timestamp);
+        if (!msgs.length) {
+            container.innerHTML = `
+                <div class="message system">
+                    <div class="msg-text">No messages yet. Start the conversation here.</div>
+                </div>`;
+            return;
+        }
+        for (const m of msgs) {
+            const contact = await this.get('contacts', contactId);
+            this.appendMessage(m.isMe ? this.localIdentity.username : (contact?.displayName || contact?.username || 'Peer'), m.text, m.isMe, false);
+        }
     }
 
-    insertEmoji() {
-      const v = $('composerInput').value;
-      $('composerInput').value = v + (v && !v.endsWith(' ') ? ' ' : '') + '🙂';
-      $('composerInput').focus();
-      this.autoGrowComposer();
+    appendMessage(user, text, isMe, autoscroll = true) {
+        const container = document.getElementById('chat-messages');
+        const emptySystem = container.querySelector('.message.system');
+        if (emptySystem) emptySystem.remove();
+        const msgNode = document.createElement('div');
+        msgNode.className = 'message';
+        msgNode.innerHTML = `
+            <div class="avatar" style="${isMe ? 'background:var(--success);' : ''}">${this.escapeHTML((user || '?').charAt(0).toUpperCase())}</div>
+            <div class="message-content">
+                <div class="msg-meta">
+                    <span class="msg-user">${this.escapeHTML(user || 'Peer')}</span>
+                    <span class="msg-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div class="msg-text">${this.escapeHTML(text)}</div>
+            </div>`;
+        container.appendChild(msgNode);
+        if (autoscroll) container.scrollTop = container.scrollHeight;
     }
 
-    autoGrowComposer() {
-      const t = $('composerInput');
-      t.style.height = 'auto';
-      t.style.height = Math.min(t.scrollHeight, 180) + 'px';
+    appendSystemMessage(text) {
+        const container = document.getElementById('chat-messages');
+        const msgNode = document.createElement('div');
+        msgNode.className = 'message system';
+        msgNode.innerHTML = `<div class="msg-text">${this.escapeHTML(text)}</div>`;
+        container.appendChild(msgNode);
+        container.scrollTop = container.scrollHeight;
     }
 
-    async copyToClipboard(text) {
-      if (!text) return showToast('Nothing to copy.');
-      try {
-        await navigator.clipboard.writeText(text);
-        showToast('Copied to clipboard.');
-      } catch {
-        showToast('Clipboard blocked by browser permissions.');
-      }
-    }
-
-    async exportBackup() {
-      if (!this.identity) return;
-      const backup = {
-        version: 2,
-        identity: {
-          username: this.identity.username,
-          displayName: this.identity.displayName,
-          bio: this.identity.bio,
-          avatarSeed: this.identity.avatarSeed,
-          fingerprint: this.identity.fingerprint,
-          signPublicJwk: this.identity.signPublicJwk,
-          kexPublicJwk: this.identity.kexPublicJwk,
-          signPrivateKey: await crypto.subtle.exportKey('jwk', this.identity.signPrivateKey),
-          kexPrivateKey: await crypto.subtle.exportKey('jwk', this.identity.kexPrivateKey)
-        },
-        exportedAt: Date.now()
-      };
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `Real-DMS-backup-${this.identity.username}.json`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    }
-
-    async resetAll() {
-      if (!confirm('Delete all local Real-DMS data on this device?')) return;
-      indexedDB.deleteDatabase(DB_NAME);
-      location.reload();
+    async closePeerConnection() {
+        try {
+            if (this.dataChannel) {
+                try { this.dataChannel.close(); } catch {}
+                this.dataChannel = null;
+            }
+            if (this.peerConnection) {
+                try { this.peerConnection.close(); } catch {}
+                this.peerConnection = null;
+            }
+        } catch {}
     }
 
     escapeHTML(str) {
-      return safeText(str).replace(/[&<>'"]/g, ch => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[ch]));
+        return String(str ?? '').replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
     }
-  }
+}
 
-  function nowFromTs(ts) {
-    try { return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
-    catch { return now(); }
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    window.app = new RealDMSApp();
-    app.boot();
-    $('contactSearch').addEventListener('input', (e) => app.renderSidebar(e.target.value));
-    $('inviteToken').addEventListener('focus', (e) => e.target.select());
-    $('answerToken').addEventListener('focus', (e) => e.target.select());
-
-    // Optional: allow direct paste of answer token into invite modal.
-    $('incomingOffer').addEventListener('paste', () => setTimeout(() => $('incomingOffer').scrollTop = $('incomingOffer').scrollHeight, 0));
-  });
-
-})();
+window.app = new RealDMS();
 </script>
+
 </body>
 </html>
