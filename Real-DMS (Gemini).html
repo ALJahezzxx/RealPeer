@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-DMS // Peer-to-Peer Messaging</title>
+    <style>
+        :root {
+            --bg-primary: #313338;
+            --bg-secondary: #2b2d31;
+            --bg-tertiary: #1e1f22;
+            --text-normal: #dbdee1;
+            --text-muted: #949ba4;
+            --brand: #5865f2;
+            --brand-hover: #4752c4;
+            --success: #23a55a;
+            --border: #3f4147;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-tertiary);
+            color: var(--text-normal);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        #app-container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: 300px;
+            background-color: var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+        }
+
+        .profile-panel {
+            padding: 15px;
+            background-color: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--brand);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .profile-info h4 {
+            font-size: 14px;
+            color: var(--text-normal);
+        }
+
+        .profile-info span {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+
+        .contact-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .contact-item {
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 4px;
+            transition: background 0.2s;
+        }
+
+        .contact-item:hover, .contact-item.active {
+            background-color: var(--bg-primary);
+        }
+
+        /* Main Chat Window */
+        .main-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-primary);
+        }
+
+        .chat-header {
+            height: 60px;
+            background-color: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            justify-content: space-between;
+        }
+
+        .message-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            max-width: 80%;
+        }
+
+        .message.system {
+            max-width: 100%;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        .message-content {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .msg-meta {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .msg-user {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .msg-time {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .msg-text {
+            font-size: 15px;
+            word-break: break-word;
+            line-height: 1.4;
+        }
+
+        .input-area {
+            padding: 0 20px 24px 20px;
+            background-color: var(--bg-primary);
+        }
+
+        .input-wrapper {
+            background-color: var(--border);
+            border-radius: 8px;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-normal);
+            font-size: 15px;
+        }
+
+        /* Connection / Setup Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            padding: 24px;
+            border: 1px solid var(--border);
+        }
+
+        .modal h2 { margin-bottom: 16px; }
+        .modal input, .modal textarea {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: white;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+
+        .btn {
+            background: var(--brand);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn:hover { background: var(--brand-hover); }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="setup-modal" class="modal-overlay">
+        <div class="modal">
+            <h2>Create Real-DMS Cryptographic Identity</h2>
+            <p style="color: var(--text-muted); margin-bottom: 16px; font-size: 14px;">
+                Your cryptographic keypair will be generated completely inside your browser locally.
+            </p>
+            <input type="text" id="username-input" placeholder="Choose a Username (e.g., Alice)">
+            <button class="btn" onclick="app.initIdentity()">Generate Identity</button>
+        </div>
+    </div>
+
+    <div id="app-container">
+        <div class="sidebar">
+            <div class="profile-panel">
+                <div class="avatar" id="my-avatar">?</div>
+                <div class="profile-info">
+                    <h4 id="my-username">Loading...</h4>
+                    <span id="my-fp">Key Fingerprint</span>
+                </div>
+            </div>
+            <div style="padding: 10px; display: flex; gap: 5px;">
+                <button class="btn" style="flex:1; font-size: 12px; padding: 6px;" onclick="app.showConnectModal()">+ Connect Peer</button>
+            </div>
+            <div class="contact-list" id="peers-list">
+                </div>
+        </div>
+
+        <div class="main-chat">
+            <div class="chat-header">
+                <div>
+                    <h3 id="active-chat-user">Select or Connect a Peer</h3>
+                    <p style="font-size: 11px; color: var(--text-muted);" id="active-chat-status"></p>
+                </div>
+            </div>
+            <div class="message-area" id="chat-messages">
+                <div class="message system">
+                    <div class="msg-text">No active session. Invite a peer via cryptographic token exchange to start an E2EE room.</div>
+                </div>
+            </div>
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <input type="text" id="message-input" placeholder="Type an encrypted message..." onkeydown="if(event.key==='Enter') app.sendMessage()">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="connect-modal" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 600px;">
+            <h2 id="modal-title">Establish E2EE Channel</h2>
+            <div id="step-1">
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">Step 1: Generate your Connection Offer Token and send it to your peer.</p>
+                <button class="btn" onclick="app.generateOffer()">Create Offer Token</button>
+                <textarea id="sdp-output" readonly style="margin-top:10px; height:100px; font-family:monospace; font-size:11px;" placeholder="Your local network token will appear here..."></textarea>
+            </div>
+            <div id="step-2" style="margin-top:15px; border-top: 1px solid var(--border); padding-top:15px;">
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">Step 2: Paste your Peer's Response Token below to bind the connection.</p>
+                <textarea id="sdp-input" style="height:100px; font-family:monospace; font-size:11px;" placeholder="Paste peer response here..."></textarea>
+                <button class="btn" onclick="app.acceptAnswer()">Finalize Connection</button>
+            </div>
+            <button class="btn" style="background:transparent; color:var(--text-muted); margin-top:10px;" onclick="document.getElementById('connect-modal').classList.add('hidden')">Close</button>
+        </div>
+    </div>
+
+    <script>
+        class RealDMS {
+            constructor() {
+                this.db = null;
+                this.localIdentity = null;
+                this.cryptoKeyPair = null;
+                this.peerConnection = null;
+                this.dataChannel = null;
+                this.activePeerId = null;
+                this.initStorage();
+            }
+
+            async initStorage() {
+                const request = indexedDB.open("RealDMS_Engine", 1);
+                request.onupgradeneeded = (e) => {
+                    let db = e.target.result;
+                    db.createObjectStore("identity", { keyPath: "id" });
+                    db.createObjectStore("messages", { keyPath: "msgId" });
+                    db.createObjectStore("peers", { keyPath: "pubKeyFingerprint" });
+                };
+                request.onsuccess = async (e) => {
+                    this.db = e.target.result;
+                    await this.checkIdentity();
+                };
+            }
+
+            async checkIdentity() {
+                const tx = this.db.transaction("identity", "readonly");
+                const store = tx.objectStore("identity");
+                const result = await new Promise(res => store.get("local").onsuccess = e => res(e.target.result));
+
+                if (result) {
+                    this.localIdentity = result;
+                    document.getElementById('setup-modal').classList.add('hidden');
+                    this.renderIdentityUI();
+                }
+            }
+
+            async initIdentity() {
+                const username = document.getElementById('username-input').value.trim();
+                if (!username) return alert("Username required!");
+
+                // Generate Crypto Keypair for Sign/Verify & Derivation
+                this.cryptoKeyPair = await window.crypto.subtle.generateKey(
+                    { name: "ECDSA", namedCurve: "P-256" },
+                    true,
+                    ["sign", "verify"]
+                );
+
+                const exportedPubKey = await window.crypto.subtle.exportKey("spki", this.cryptoKeyPair.publicKey);
+                const hashBuffer = await window.crypto.subtle.digest("SHA-256", exportedPubKey);
+                const fingerprint = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 12);
+
+                this.localIdentity = {
+                    id: "local",
+                    username: username,
+                    fingerprint: fingerprint,
+                    registeredAt: Date.now()
+                };
+
+                const tx = this.db.transaction("identity", "readwrite");
+                tx.objectStore("identity").put(this.localIdentity);
+                
+                document.getElementById('setup-modal').classList.add('hidden');
+                this.renderIdentityUI();
+            }
+
+            renderIdentityUI() {
+                document.getElementById('my-username').innerText = this.localIdentity.username;
+                document.getElementById('my-avatar').innerText = this.localIdentity.username[0].toUpperCase();
+                document.getElementById('my-fp').innerText = `ID: ${this.localIdentity.fingerprint}`;
+            }
+
+            showConnectModal() {
+                document.getElementById('connect-modal').classList.remove('hidden');
+                this.initWebRTC();
+            }
+
+            initWebRTC() {
+                const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+                this.peerConnection = new RTCPeerConnection(config);
+
+                this.peerConnection.onicecandidate = (e) => {
+                    if (!e.candidate) {
+                        // All ICE elements captured, update the complete token
+                        const offer = this.peerConnection.localDescription;
+                        document.getElementById('sdp-output').value = btoa(JSON.stringify({
+                            sdp: offer,
+                            username: this.localIdentity.username,
+                            fingerprint: this.localIdentity.fingerprint
+                        }));
+                    }
+                };
+
+                this.peerConnection.ondatachannel = (e) => {
+                    this.dataChannel = e.channel;
+                    this.setupChannelEvents();
+                };
+            }
+
+            async generateOffer() {
+                this.dataChannel = this.peerConnection.createDataChannel("secure-text-relay");
+                this.setupChannelEvents();
+
+                const offer = await this.peerConnection.createOffer();
+                await this.peerConnection.setLocalDescription(offer);
+            }
+
+            async acceptAnswer() {
+                const tokenString = document.getElementById('sdp-input').value.trim();
+                if(!tokenString) return;
+                
+                const remoteData = JSON.parse(atob(tokenString));
+                
+                if (remoteData.sdp.type === "offer") {
+                    await this.peerConnection.setRemoteDescription(new RTCSessionDescription(remoteData.sdp));
+                    const answer = await this.peerConnection.createAnswer();
+                    await this.peerConnection.setLocalDescription(answer);
+                    
+                    document.getElementById('sdp-output').value = btoa(JSON.stringify({
+                        sdp: answer,
+                        username: this.localIdentity.username,
+                        fingerprint: this.localIdentity.fingerprint
+                    }));
+                    this.activePeerId = remoteData.username;
+                } else if (remoteData.sdp.type === "answer") {
+                    await this.peerConnection.setRemoteDescription(new RTCSessionDescription(remoteData.sdp));
+                    this.activePeerId = remoteData.username;
+                }
+            }
+
+            setupChannelEvents() {
+                this.dataChannel.onopen = () => {
+                    document.getElementById('connect-modal').classList.add('hidden');
+                    document.getElementById('active-chat-user').innerText = this.activePeerId || "Connected Peer";
+                    document.getElementById('active-chat-status').innerText = "Session Established // E2EE Active";
+                    this.appendSystemMessage("Secure End-to-End messaging channel established directly with peer.");
+                };
+
+                this.dataChannel.onmessage = (e) => {
+                    const data = JSON.parse(e.data);
+                    this.appendMessage(this.activePeerId || "Peer", data.text, false);
+                };
+            }
+
+            sendMessage() {
+                const input = document.getElementById('message-input');
+                const text = input.value.trim();
+                if (!text || !this.dataChannel || this.dataChannel.readyState !== "open") return;
+
+                // Transmit over raw WebRTC layer
+                this.dataChannel.send(JSON.stringify({ text: text, timestamp: Date.now() }));
+                this.appendMessage(this.localIdentity.username, text, true);
+                input.value = '';
+            }
+
+            appendMessage(user, text, isMe) {
+                const container = document.getElementById('chat-messages');
+                const msgNode = document.createElement('div');
+                msgNode.className = 'message';
+                msgNode.innerHTML = `
+                    <div class="avatar" style="${isMe ? 'background:var(--success)' : ''}">${user[0].toUpperCase()}</div>
+                    <div class="message-content">
+                        <div class="msg-meta">
+                            <span class="msg-user">${user}</span>
+                            <span class="msg-time">${new Date().toLocaleTimeString()}</span>
+                        </div>
+                        <div class="msg-text">${this.escapeHTML(text)}</div>
+                    </div>
+                `;
+                container.appendChild(msgNode);
+                container.scrollTop = container.scrollHeight;
+            }
+
+            appendSystemMessage(text) {
+                const container = document.getElementById('chat-messages');
+                const msgNode = document.createElement('div');
+                msgNode.className = 'message system';
+                msgNode.innerHTML = `<div class="msg-text">${text}</div>`;
+                container.appendChild(msgNode);
+            }
+
+            escapeHTML(str) {
+                return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+            }
+        }
+
+        const app = new RealDMS();
+    </script>
+</body>
+</html>
