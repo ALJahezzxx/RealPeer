@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>RealPeer — P2P Discord-Style Chat</title>
+    <style>
+        /* Discord-like dark theme, mobile-responsive CSS */
+        :root {
+            --bg-primary: #36393f;
+            --bg-secondary: #2f3136;
+            --bg-tertiary: #202225;
+            --text-normal: #dcddde;
+            --text-muted: #72767d;
+            --brand: #5865f2;
+            --brand-hover: #4752c4;
+            --danger: #ed4245;
+            --success: #57f287;
+            --sidebar-width: 240px;
+            --memberlist-width: 240px;
+            --header-height: 48px;
+            --chat-input-height: 60px;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-normal);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            border-right: 1px solid #202225;
+            overflow-y: auto;
+        }
+        .sidebar-header {
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 16px;
+            border-bottom: 1px solid #202225;
+            color: #fff;
+        }
+        .friends-list {
+            flex: 1;
+            padding: 8px 0;
+        }
+        .friend-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin: 2px 8px;
+            transition: background 0.15s;
+        }
+        .friend-item:hover, .friend-item.active {
+            background: #4f545c;
+        }
+        .friend-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--brand);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #fff;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        .friend-name {
+            font-size: 15px;
+            font-weight: 500;
+        }
+        .friend-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: auto;
+            background: var(--text-muted);
+        }
+        .friend-status.online {
+            background: var(--success);
+        }
+        /* Main chat area */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        .chat-header {
+            height: var(--header-height);
+            background: var(--bg-primary);
+            border-bottom: 1px solid #202225;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            font-weight: 600;
+            font-size: 16px;
+            color: #fff;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .message {
+            display: flex;
+            align-items: flex-start;
+            margin-top: 8px;
+        }
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--brand);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #fff;
+            margin-right: 12px;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+        .message-content {
+            background: #40444b;
+            padding: 8px 12px;
+            border-radius: 8px;
+            max-width: 75%;
+            word-wrap: break-word;
+        }
+        .message-sender {
+            font-size: 13px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 2px;
+        }
+        .message-text {
+            font-size: 14px;
+            color: #dcddde;
+        }
+        .message-time {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .chat-input-area {
+            height: var(--chat-input-height);
+            background: var(--bg-primary);
+            border-top: 1px solid #202225;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .chat-input {
+            flex: 1;
+            background: #40444b;
+            border: none;
+            color: #dcddde;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+        }
+        .chat-input::placeholder {
+            color: #72767d;
+        }
+        .btn {
+            background: var(--brand);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn:hover {
+            background: var(--brand-hover);
+        }
+        .btn-secondary {
+            background: #4f545c;
+        }
+        .btn-secondary:hover {
+            background: #5d6269;
+        }
+        /* Right member list (simplified) */
+        .member-list {
+            width: var(--memberlist-width);
+            background: var(--bg-secondary);
+            border-left: 1px solid #202225;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            flex-shrink: 0;
+            overflow-y: auto;
+        }
+        .member-item {
+            display: flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            gap: 8px;
+        }
+        .voice-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--success);
+            font-size: 13px;
+        }
+        /* Login / Register modal */
+        .modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 32px;
+            width: 400px;
+            max-width: 90%;
+        }
+        .input-group {
+            margin-bottom: 16px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 4px;
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg-primary);
+            border: 1px solid #202225;
+            border-radius: 4px;
+            color: #dcddde;
+            outline: none;
+        }
+        .error-msg {
+            color: var(--danger);
+            font-size: 13px;
+            margin-top: 4px;
+        }
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .sidebar.mobile-open {
+                display: flex;
+                position: absolute;
+                top: 0; left: 0; bottom: 0;
+                z-index: 10;
+                width: 80%;
+            }
+            .member-list { display: none; }
+            .mobile-toggle {
+                display: block;
+                background: var(--bg-tertiary);
+                border: none;
+                color: white;
+                font-size: 24px;
+                padding: 0 12px;
+                cursor: pointer;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Login Modal (shown when not logged in) -->
+<div id="auth-modal" class="modal">
+    <div class="modal-content">
+        <h2 style="color:#fff; margin-bottom:16px;">RealPeer — Sign Up / Log In</h2>
+        <div class="input-group">
+            <label>Username (3-18 chars)</label>
+            <input type="text" id="auth-username" placeholder="e.g. alice" maxlength="18">
+            <div id="username-error" class="error-msg"></div>
+        </div>
+        <div class="input-group">
+            <label>Password (min 8 chars)</label>
+            <input type="password" id="auth-password" placeholder="Min 8 characters">
+            <div id="password-error" class="error-msg"></div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top: 20px;">
+            <button id="btn-register" class="btn">Register</button>
+            <button id="btn-login" class="btn btn-secondary">Log In</button>
+        </div>
+        <p style="color: var(--text-muted); font-size: 12px; margin-top: 16px;">
+            Your password is never sent anywhere. An identity keypair is derived locally.
+        </p>
+    </div>
+</div>
+
+<!-- Main App UI (hidden until logged in) -->
+<div id="app" style="display:none; width:100%; height:100%;">
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            RealPeer
+            <button class="mobile-toggle" style="display:none;" id="close-sidebar-btn">×</button>
+        </div>
+        <div class="friends-list" id="friends-list-container">
+            <!-- dynamically filled -->
+        </div>
+        <div style="padding: 16px; border-top: 1px solid #202225;">
+            <button id="add-friend-btn" class="btn" style="width:100%;">Add Friend</button>
+        </div>
+        <div style="padding: 8px 16px; color: var(--text-muted); font-size: 12px;">
+            <span id="own-username-display"></span>
+            <button id="logout-btn" style="background:none; border:none; color: var(--danger); cursor:pointer; font-size:12px; margin-left:8px;">Logout</button>
+        </div>
+    </div>
+
+    <!-- Main Chat -->
+    <div class="main">
+        <div class="chat-header">
+            <button class="mobile-toggle" id="toggle-sidebar-btn" style="display:none;">☰</button>
+            <span id="chat-header-name">Select a friend</span>
+            <span style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                <span id="voice-status" class="voice-indicator" style="display:none;">🎤 In voice</span>
+                <button id="voice-call-btn" class="btn btn-secondary" style="font-size: 13px;">Voice Call</button>
+            </span>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-area">
+            <input type="text" class="chat-input" id="message-input" placeholder="Message..." disabled>
+            <button id="send-btn" class="btn" disabled>Send</button>
+        </div>
+    </div>
+
+    <!-- Member list (shows current friend's info) -->
+    <div class="member-list" id="member-list">
+        <div style="font-weight:600; margin-bottom:16px; color:#fff;">Friend Info</div>
+        <div id="friend-detail">
+            <div class="member-item">
+                <span class="friend-avatar" id="friend-avatar">?</span>
+                <span id="friend-name-detail">-</span>
+            </div>
+            <div style="margin-top:12px; font-size:13px; color:var(--text-muted);" id="friend-pubkey-snippet"></div>
+            <div id="friend-presence" style="margin-top:8px; font-size:13px;">Offline</div>
+        </div>
+    </div>
+</div>
+
+<!-- Include nostr-tools from CDN -->
+<script type="module">
+    import * as nostr from 'https://esm.sh/nostr-tools@2.2.1';
+    window.nostr = nostr;
+</script>
+
+<script type="module">
+    // --- RealPeer Core (modular design within one file) ---
+
+    // ---------- Crypto / Identity ----------
+    async function deriveKeypair(username, password) {
+        const enc = new TextEncoder();
+        const salt = enc.encode('realpeer-salt:' + username); // deterministic salt
+        const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+        const derivedBits = await crypto.subtle.deriveBits(
+            { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+            keyMaterial,
+            256
+        );
+        const seedHex = [...new Uint8Array(derivedBits)].map(b => b.toString(16).padStart(2, '0')).join('');
+        const privKey = seedHex; // 64 hex chars
+        const pubKey = nostr.getPublicKey(privKey);
+        return { privKey, pubKey };
+    }
+
+    function validateUsername(username) {
+        if (!username || username.length < 3 || username.length > 18) return 'Username must be 3-18 characters.';
+        if (!/^[a-zA-Z0-9_\-]+$/.test(username)) return 'Only letters, numbers, _ and - allowed.';
+        return null;
+    }
+
+    function validatePassword(password) {
+        if (!password || password.length < 8) return 'Password must be at least 8 characters.';
+        return null;
+    }
+
+    // ---------- Local Storage ----------
+    const LS = {
+        get(key) { return JSON.parse(localStorage.getItem('rp_' + key)); },
+        set(key, val) { localStorage.setItem('rp_' + key, JSON.stringify(val)); },
+        remove(key) { localStorage.removeItem('rp_' + key); }
+    };
+
+    // ---------- IndexedDB for Chat History ----------
+    let db;
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('RealPeerChat', 1);
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('messages')) {
+                    const store = db.createObjectStore('messages', { keyPath: 'id' });
+                    store.createIndex('chatId', 'chatId', { unique: false });
+                }
+                if (!db.objectStoreNames.contains('pending')) {
+                    const store = db.createObjectStore('pending', { keyPath: 'id' });
+                    store.createIndex('recipientPubkey', 'recipientPubkey', { unique: false });
+                }
+            };
+            request.onsuccess = (e) => { db = e.target.result; resolve(db); };
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    async function saveMessage(chatId, message) {
+        const tx = db.transaction('messages', 'readwrite');
+        const store = tx.objectStore('messages');
+        await store.put({ id: message.id, chatId, ...message });
+    }
+
+    async function getMessages(chatId) {
+        const tx = db.transaction('messages', 'readonly');
+        const store = tx.objectStore('messages');
+        const index = store.index('chatId');
+        const messages = [];
+        await new Promise((resolve) => {
+            index.openCursor(IDBKeyRange.only(chatId)).onsuccess = (e) => {
+                const cursor = e.target.result;
+                if (cursor) {
+                    messages.push(cursor.value);
+                    cursor.continue();
+                } else resolve();
+            };
+        });
+        return messages.sort((a,b) => a.timestamp - b.timestamp);
+    }
+
+    async function savePendingMessage(recipientPubkey, message) {
+        const tx = db.transaction('pending', 'readwrite');
+        const store = tx.objectStore('pending');
+        await store.put({ id: message.id, recipientPubkey, message });
+    }
+
+    async function getPendingMessages(recipientPubkey) {
+        const tx = db.transaction('pending', 'readonly');
+        const store = tx.objectStore('pending');
+        const index = store.index('recipientPubkey');
+        const pending = [];
+        await new Promise((resolve) => {
+            index.openCursor(IDBKeyRange.only(recipientPubkey)).onsuccess = (e) => {
+                const cursor = e.target.result;
+                if (cursor) {
+                    pending.push(cursor.value.message);
+                    cursor.continue();
+                } else resolve();
+            };
+        });
+        return pending;
+    }
+
+    async function deletePendingMessage(id) {
+        const tx = db.transaction('pending', 'readwrite');
+        const store = tx.objectStore('pending');
+        await store.delete(id);
+    }
+
+    // ---------- Nostr Relay Setup ----------
+    const RELAYS = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net'];
+    let relayPool;
+    function connectToRelays() {
+        relayPool = nostr.SimplePool ? new nostr.SimplePool() : nostr.RelayPool ? new nostr.RelayPool() : null;
+        if (!relayPool) {
+            // fallback manual pool
+            relayPool = { relays: {}, async ensureRelay(url) {
+                if (!this.relays[url]) {
+                    const r = nostr.relayInit(url);
+                    await r.connect();
+                    this.relays[url] = r;
+                }
+                return this.relays[url];
+            }, async publish(event) {
+                for (const url of RELAYS) {
+                    try {
+                        const relay = await this.ensureRelay(url);
+                        relay.publish(event);
+                    } catch(e){}
+                }
+            }, subscribe(filters, onEvent) {
+                const subs = [];
+                RELAYS.forEach(url => {
+                    (async () => {
+                        try {
+                            const relay = await this.ensureRelay(url);
+                            const sub = relay.sub(filters);
+                            sub.on('event', onEvent);
+                            subs.push(sub);
+                        } catch(e){}
+                    })();
+                });
+                return subs;
+            }};
+        }
+        // reconnect if needed
+    }
+
+    // ---------- App State ----------
+    let currentUser = null; // { username, privKey, pubKey }
+    let friends = []; // [{ username, pubKey }]
+    let activeChat = null; // pubKey of friend being chatted with
+    let peerConnections = {}; // pubKey -> { pc, dc, stream, pendingCandidates }
+
+    // ---------- UI Helpers ----------
+    function showAuth() {
+        document.getElementById('auth-modal').style.display = 'flex';
+        document.getElementById('app').style.display = 'none';
+    }
+    function showApp() {
+        document.getElementById('auth-modal').style.display = 'none';
+        document.getElementById('app').style.display = 'flex';
+        renderFriendsList();
+        if (activeChat) openChat(activeChat);
+    }
+
+    function renderFriendsList() {
+        const container = document.getElementById('friends-list-container');
+        container.innerHTML = '';
+        friends.forEach(f => {
+            const div = document.createElement('div');
+            div.className = 'friend-item' + (activeChat === f.pubKey ? ' active' : '');
+            div.innerHTML = `
+                <div class="friend-avatar">${f.username[0].toUpperCase()}</div>
+                <span class="friend-name">${f.username}</span>
+                <div class="friend-status ${peerConnections[f.pubKey]?.dc?.readyState === 'open' ? 'online' : ''}"></div>
+            `;
+            div.onclick = () => openChat(f.pubKey);
+            container.appendChild(div);
+        });
+    }
+
+    async function openChat(pubKey) {
+        activeChat = pubKey;
+        const friend = friends.find(f => f.pubKey === pubKey);
+        document.getElementById('chat-header-name').textContent = friend ? friend.username : 'Unknown';
+        document.getElementById('friend-avatar').textContent = friend ? friend.username[0].toUpperCase() : '?';
+        document.getElementById('friend-name-detail').textContent = friend ? friend.username : '-';
+        document.getElementById('friend-pubkey-snippet').textContent = pubKey.slice(0, 8) + '...' + pubKey.slice(-6);
+        const online = peerConnections[pubKey]?.dc?.readyState === 'open';
+        document.getElementById('friend-presence').textContent = online ? '🟢 Online' : '⚫ Offline';
+        document.getElementById('voice-status').style.display = peerConnections[pubKey]?.stream ? 'flex' : 'none';
+
+        // Load chat history
+        const messages = await getMessages(pubKey);
+        const chatEl = document.getElementById('chat-messages');
+        chatEl.innerHTML = '';
+        messages.forEach(m => appendMessageToUI(m));
+        chatEl.scrollTop = chatEl.scrollHeight;
+
+        // Enable input
+        document.getElementById('message-input').disabled = false;
+        document.getElementById('send-btn').disabled = false;
+
+        // Establish WebRTC if not already
+        if (!peerConnections[pubKey] || peerConnections[pubKey].dc.readyState !== 'open') {
+            initiateWebRTC(pubKey);
+        }
+        // Also fetch any pending messages from Nostr (missed DMs)
+        fetchMissedDMs(pubKey);
+
+        renderFriendsList();
+    }
+
+    function appendMessageToUI(msg, prepend = false) {
+        const chatEl = document.getElementById('chat-messages');
+        const div = document.createElement('div');
+        div.className = 'message';
+        const senderName = msg.sender === currentUser.pubKey ? 'You' : (friends.find(f=>f.pubKey===msg.sender)?.username || 'Unknown');
+        div.innerHTML = `
+            <div class="message-avatar">${senderName[0].toUpperCase()}</div>
+            <div class="message-content">
+                <div class="message-sender">${senderName}</div>
+                <div class="message-text">${escapeHtml(msg.text)}</div>
+                <div class="message-time">${new Date(msg.timestamp).toLocaleTimeString()}</div>
+            </div>
+        `;
+        if (prepend) chatEl.prepend(div);
+        else chatEl.appendChild(div);
+        chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // ---------- WebRTC ----------
+    const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+    function initiateWebRTC(recipientPubKey) {
+        if (peerConnections[recipientPubKey]) return;
+        const pc = new RTCPeerConnection(configuration);
+        const dc = pc.createDataChannel('chat');
+        setupDataChannel(dc, recipientPubKey);
+
+        // Handle ICE candidates
+        const pendingCandidates = [];
+        pc.onicecandidate = (event) => {
+            if (event.candidate) {
+                pendingCandidates.push(event.candidate);
+                // we'll send after local description set
+            }
+        };
+
+        pc.onnegotiationneeded = async () => {
+            try {
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                // Send offer via Nostr DM
+                sendSignaling(recipientPubKey, { type: 'offer', sdp: pc.localDescription });
+                // Send any pending candidates
+                flushPendingCandidates(recipientPubKey, pendingCandidates);
+            } catch(e) { console.error(e); }
+        };
+
+        // When remote stream is added (voice)
+        pc.ontrack = (event) => {
+            if (event.track.kind === 'audio') {
+                const audio = new Audio();
+                audio.srcObject = new MediaStream([event.track]);
+                audio.play().catch(e => console.log('autoplay prevented'));
+            }
+        };
+
+        peerConnections[recipientPubKey] = { pc, dc, pendingCandidates, stream: null };
+    }
+
+    function setupDataChannel(dc, peerPubKey) {
+        dc.onopen = () => {
+            console.log('DC open with', peerPubKey);
+            // send any pending offline messages
+            flushPendingMessages(peerPubKey);
+            renderFriendsList();
+            if (activeChat === peerPubKey) {
+                document.getElementById('friend-presence').textContent = '🟢 Online';
+            }
+        };
+        dc.onclose = () => {
+            console.log('DC closed');
+            renderFriendsList();
+            if (activeChat === peerPubKey) {
+                document.getElementById('friend-presence').textContent = '⚫ Offline';
+            }
+        };
+        dc.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'text') {
+                receiveMessage(peerPubKey, msg);
+            }
+        };
+    }
+
+    async function receiveMessage(senderPubKey, msg) {
+        const messageObj = {
+            id: msg.id,
+            sender: senderPubKey,
+            text: msg.text,
+            timestamp: msg.timestamp
+        };
+        // Save to DB
+        await saveMessage(senderPubKey, messageObj);
+        // Display if current chat
+        if (activeChat === senderPubKey) {
+            appendMessageToUI(messageObj);
+        }
+    }
+
+    async function sendTextMessage() {
+        if (!activeChat) return;
+        const input = document.getElementById('message-input');
+        const text = input.value.trim();
+        if (!text) return;
+        const messageId = crypto.randomUUID();
+        const timestamp = Date.now();
+        const msg = {
+            id: messageId,
+            type: 'text',
+            text,
+            timestamp,
+            sender: currentUser.pubKey
+        };
+
+        // Save locally
+        await saveMessage(activeChat, msg);
+        appendMessageToUI(msg);
+
+        // Send via WebRTC if connected
+        const conn = peerConnections[activeChat];
+        if (conn && conn.dc.readyState === 'open') {
+            conn.dc.send(JSON.stringify(msg));
+        } else {
+            // Store as pending and send via Nostr DM
+            await savePendingMessage(activeChat, msg);
+            // Publish as encrypted DM to relays
+            await sendEncryptedDM(activeChat, msg);
+        }
+        input.value = '';
+    }
+
+    // ---------- Nostr Signaling & Messaging ----------
+    async function sendSignaling(recipientPubKey, payload) {
+        // Encrypt using NIP-04 (shared secret)
+        const encrypted = await nostr.nip04.encrypt(currentUser.privKey, recipientPubKey, JSON.stringify(payload));
+        const event = {
+            kind: 4,
+            pubkey: currentUser.pubKey,
+            created_at: Math.floor(Date.now() / 1000),
+            tags: [['p', recipientPubKey]],
+            content: encrypted,
+        };
+        event.id = nostr.getEventHash(event);
+        event.sig = nostr.signEvent(event, currentUser.privKey);
+        relayPool.publish(event);
+    }
+
+    async function sendEncryptedDM(recipientPubKey, messageObj) {
+        const encrypted = await nostr.nip04.encrypt(currentUser.privKey, recipientPubKey, JSON.stringify(messageObj));
+        const event = {
+            kind: 4,
+            pubkey: currentUser.pubKey,
+            created_at: Math.floor(Date.now() / 1000),
+            tags: [['p', recipientPubKey]],
+            content: encrypted,
+        };
+        event.id = nostr.getEventHash(event);
+        event.sig = nostr.signEvent(event, currentUser.privKey);
+        relayPool.publish(event);
+    }
+
+    // Listen for incoming DMs
+    function subscribeInbox() {
+        const filters = { kinds: [4], '#p': [currentUser.pubKey], since: Math.floor(Date.now() / 1000) - 3600 };
+        relayPool.subscribe([filters], async (event) => {
+            // Decrypt
+            try {
+                const decrypted = await nostr.nip04.decrypt(currentUser.privKey, event.pubkey, event.content);
+                const payload = JSON.parse(decrypted);
+                // Check if it's a signaling message
+                if (payload.type === 'offer' || payload.type === 'answer' || payload.type === 'candidate') {
+                    handleSignaling(event.pubkey, payload);
+                } else if (payload.type === 'text') {
+                    // Offline message delivery
+                    const messageObj = {
+                        id: payload.id,
+                        sender: event.pubkey,
+                        text: payload.text,
+                        timestamp: payload.timestamp
+                    };
+                    await saveMessage(event.pubkey, messageObj);
+                    if (activeChat === event.pubkey) appendMessageToUI(messageObj);
+                    // Also remove from pending if we had it queued (to avoid duplicates)
+                    // (implementation omitted for brevity)
+                }
+            } catch(e) {
+                console.error('Decryption failed', e);
+            }
+        });
+    }
+
+    async function handleSignaling(peerPubKey, payload) {
+        // If we don't have a connection yet, create one as the answerer
+        let conn = peerConnections[peerPubKey];
+        if (!conn) {
+            const pc = new RTCPeerConnection(configuration);
+            const dc = pc.createDataChannel('chat'); // we can still create both ends?
+            // Actually, for answerer, we should listen for datachannel
+            pc.ondatachannel = (event) => {
+                setupDataChannel(event.channel, peerPubKey);
+            };
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    sendSignaling(peerPubKey, { type: 'candidate', candidate: event.candidate });
+                }
+            };
+            pc.ontrack = (event) => {
+                if (event.track.kind === 'audio') {
+                    const audio = new Audio();
+                    audio.srcObject = new MediaStream([event.track]);
+                    audio.play().catch(e => {});
+                }
+            };
+            conn = { pc, dc: null, pendingCandidates: [] };
+            peerConnections[peerPubKey] = conn;
+        }
+
+        if (payload.type === 'offer') {
+            await conn.pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+            const answer = await conn.pc.createAnswer();
+            await conn.pc.setLocalDescription(answer);
+            sendSignaling(peerPubKey, { type: 'answer', sdp: conn.pc.localDescription });
+            flushPendingCandidates(peerPubKey, conn.pendingCandidates);
+        } else if (payload.type === 'answer') {
+            await conn.pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+        } else if (payload.type === 'candidate') {
+            if (payload.candidate) {
+                try {
+                    await conn.pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+                } catch(e) {}
+            }
+        }
+    }
+
+    function flushPendingCandidates(peerPubKey, candidates) {
+        while (candidates.length > 0) {
+            const c = candidates.shift();
+            sendSignaling(peerPubKey, { type: 'candidate', candidate: c });
+        }
+    }
+
+    async function flushPendingMessages(peerPubKey) {
+        const pending = await getPendingMessages(peerPubKey);
+        const conn = peerConnections[peerPubKey];
+        if (conn && conn.dc.readyState === 'open') {
+            for (const msg of pending) {
+                conn.dc.send(JSON.stringify(msg));
+                await deletePendingMessage(msg.id);
+            }
+        }
+    }
+
+    async function fetchMissedDMs(peerPubKey) {
+        // subscribe to past DMs since last seen (simplified: fetch all recent)
+        const filter = { kinds: [4], authors: [peerPubKey], '#p': [currentUser.pubKey], limit: 50 };
+        // We'll use a temporary subscription that closes after getting events
+        const subs = relayPool.subscribe([filter], async (event) => {
+            // Decrypt and process as offline message
+            try {
+                const decrypted = await nostr.nip04.decrypt(currentUser.privKey, event.pubkey, event.content);
+                const payload = JSON.parse(decrypted);
+                if (payload.type === 'text') {
+                    const messageObj = {
+                        id: payload.id,
+                        sender: event.pubkey,
+                        text: payload.text,
+                        timestamp: payload.timestamp
+                    };
+                    // Avoid duplicates (check if already stored)
+                    const existing = await getMessages(event.pubkey);
+                    if (!existing.some(m => m.id === messageObj.id)) {
+                        await saveMessage(event.pubkey, messageObj);
+                        if (activeChat === event.pubkey) appendMessageToUI(messageObj);
+                    }
+                }
+            } catch(e) {}
+        });
+        // after a few seconds close subs to avoid permanent listeners
+        setTimeout(() => {
+            subs.forEach(sub => sub.unsub());
+        }, 5000);
+    }
+
+    // ---------- Voice Call ----------
+    async function startVoiceCall() {
+        if (!activeChat) return;
+        const conn = peerConnections[activeChat];
+        if (!conn) return;
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => conn.pc.addTrack(track, stream));
+            conn.stream = stream;
+            document.getElementById('voice-status').style.display = 'flex';
+            // Also notify peer that voice started (optional)
+        } catch(e) { alert('Microphone access denied.'); }
+    }
+
+    // ---------- Friend Management ----------
+    function addFriend(username, pubKey) {
+        if (friends.find(f => f.pubKey === pubKey)) return;
+        friends.push({ username, pubKey });
+        LS.set('friends', friends);
+        renderFriendsList();
+        // Publish username mapping for discovery
+        publishUsernameMapping(username);
+    }
+
+    async function publishUsernameMapping(username) {
+        const event = {
+            kind: 30001,
+            pubkey: currentUser.pubKey,
+            created_at: Math.floor(Date.now() / 1000),
+            tags: [['d', username.toLowerCase()]],
+            content: '',
+        };
+        event.id = nostr.getEventHash(event);
+        event.sig = nostr.signEvent(event, currentUser.privKey);
+        relayPool.publish(event);
+    }
+
+    async function searchUserByUsername(username) {
+        // Query relay for kind 30001 with tag d = username
+        return new Promise((resolve) => {
+            const filter = { kinds: [30001], '#d': [username.toLowerCase()] };
+            const results = [];
+            const subs = relayPool.subscribe([filter], (event) => {
+                results.push({ pubkey: event.pubkey, username });
+            });
+            setTimeout(() => {
+                subs.forEach(s => s.unsub());
+                resolve(results);
+            }, 3000);
+        });
+    }
+
+    document.getElementById('add-friend-btn').addEventListener('click', async () => {
+        const username = prompt('Enter friend\'s username:');
+        if (!username) return;
+        const results = await searchUserByUsername(username);
+        if (results.length === 0) {
+            alert('No user found with that username on relays.');
+            return;
+        }
+        // Simple: pick first result; ideally show list
+        const chosen = results[0];
+        addFriend(username, chosen.pubkey);
+        openChat(chosen.pubkey);
+    });
+
+    // ---------- Auth Logic ----------
+    async function register() {
+        const username = document.getElementById('auth-username').value.trim();
+        const password = document.getElementById('auth-password').value;
+        let err = validateUsername(username);
+        if (err) { document.getElementById('username-error').textContent = err; return; }
+        err = validatePassword(password);
+        if (err) { document.getElementById('password-error').textContent = err; return; }
+        const keys = await deriveKeypair(username, password);
+        LS.set('user', { username, pubKey: keys.pubKey });
+        LS.set('friends', []);
+        currentUser = { username, privKey: keys.privKey, pubKey: keys.pubKey };
+        showApp();
+        connectToRelays();
+        subscribeInbox();
+        publishUsernameMapping(username);
+    }
+
+    async function login() {
+        const username = document.getElementById('auth-username').value.trim();
+        const password = document.getElementById('auth-password').value;
+        const keys = await deriveKeypair(username, password);
+        const stored = LS.get('user');
+        if (!stored || stored.pubKey !== keys.pubKey) {
+            alert('Invalid username or password (or not registered).');
+            return;
+        }
+        currentUser = { username, privKey: keys.privKey, pubKey: keys.pubKey };
+        friends = LS.get('friends') || [];
+        showApp();
+        connectToRelays();
+        subscribeInbox();
+        // re-publish mapping in case it was lost
+        publishUsernameMapping(username);
+    }
+
+    document.getElementById('btn-register').onclick = register;
+    document.getElementById('btn-login').onclick = login;
+    document.getElementById('logout-btn').onclick = () => {
+        currentUser = null;
+        LS.remove('user');
+        showAuth();
+    };
+    document.getElementById('send-btn').onclick = sendTextMessage;
+    document.getElementById('message-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendTextMessage();
+    });
+    document.getElementById('voice-call-btn').onclick = startVoiceCall;
+
+    // Mobile sidebar toggle
+    document.getElementById('toggle-sidebar-btn').onclick = () => {
+        document.getElementById('sidebar').classList.add('mobile-open');
+    };
+    document.getElementById('close-sidebar-btn').onclick = () => {
+        document.getElementById('sidebar').classList.remove('mobile-open');
+    };
+
+    // Initialise
+    window.addEventListener('load', async () => {
+        await openDB();
+        const storedUser = LS.get('user');
+        if (storedUser) {
+            // need to re-derive keypair from user input? Actually we can't login automatically because we don't have password.
+            // We'll prompt login. So show auth.
+            showAuth();
+        } else {
+            showAuth();
+        }
+        // If user is logged in, would need to re-enter password each time.
+    });
+</script>
+
+</body>
+</html>
